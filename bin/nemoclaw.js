@@ -225,6 +225,24 @@ function status() {
   run(`bash "${SCRIPTS}/start-services.sh" --status`);
 }
 
+function term(instanceName) {
+  if (!instanceName) {
+    // Local — run openshell term directly
+    run("openshell term");
+  } else {
+    // Remote — SSH into Brev instance and run it there
+    run(`ssh ${instanceName} 'openshell term'`);
+  }
+}
+
+function connect(instanceName) {
+  if (!instanceName) {
+    run("openshell sandbox connect nemoclaw");
+  } else {
+    run(`ssh ${instanceName} 'NVIDIA_API_KEY="${process.env.NVIDIA_API_KEY || ""}" openshell sandbox connect nemoclaw'`);
+  }
+}
+
 function help() {
   console.log(`
   nemoclaw — NemoClaw CLI
@@ -232,6 +250,8 @@ function help() {
   Usage:
     nemoclaw setup                 Set up locally (gateway, providers, sandbox)
     nemoclaw deploy <name>         Deploy to a Brev VM and start services
+    nemoclaw connect [name]        Connect to sandbox (local or remote Brev)
+    nemoclaw term [name]           Monitor network egress (local or remote Brev)
     nemoclaw start                 Start services (Telegram, tunnel)
     nemoclaw stop                  Stop all services
     nemoclaw status                Show service status
@@ -253,6 +273,8 @@ const [cmd, ...args] = process.argv.slice(2);
   switch (cmd) {
     case "setup":   await setup(); break;
     case "deploy":  await deploy(args[0]); break;
+    case "connect": connect(args[0]); break;
+    case "term":    term(args[0]); break;
     case "start":   await start(); break;
     case "stop":    stop(); break;
     case "status":  status(); break;
