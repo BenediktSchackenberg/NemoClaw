@@ -194,6 +194,7 @@ Refer to the documentation for more information on NemoClaw.
 - [Inference Profiles](https://docs.nvidia.com/nemoclaw/latest/reference/inference-profiles.html): NVIDIA cloud inference configuration
 - [Network Policies](https://docs.nvidia.com/nemoclaw/latest/reference/network-policies.html): egress control and policy customization
 - [CLI Commands](https://docs.nvidia.com/nemoclaw/latest/reference/commands.html): full command reference
+- [Troubleshooting](https://docs.nvidia.com/nemoclaw/latest/reference/troubleshooting.html): common issues and resolution steps
 
 ## License
 

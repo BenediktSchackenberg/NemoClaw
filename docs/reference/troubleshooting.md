@@ -124,9 +124,3 @@ $ openclaw nemoclaw logs --run-id <id>
 
 If the run ID is unknown, omit `--run-id` to view logs from the most recent run.
 Use `--follow` to stream logs in real time while debugging.
-
-## Related Topics
-
-- [Commands](commands.md) for the full CLI reference.
-- [Monitor Sandbox Activity](../monitoring/monitor-sandbox-activity.md) for health checks, log viewing, and TUI monitoring.
-- [Approve or Deny Agent Network Requests](../network-policy/approve-network-requests.md) for the operator approval flow.
