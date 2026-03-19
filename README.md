@@ -79,7 +79,7 @@ If `nemoclaw` is not found after install, run `source ~/.bashrc` (or `source ~/.
 
 To uninstall NemoClaw and remove its local state, run:
 
-```console
+```bash
 curl -fsSL https://raw.githubusercontent.com/NVIDIA/NemoClaw/refs/heads/main/uninstall.sh | bash
 ```
 
