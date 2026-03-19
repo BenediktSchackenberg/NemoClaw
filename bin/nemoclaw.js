@@ -47,6 +47,19 @@ function resolveUninstallScript() {
   return null;
 }
 
+function exitWithSpawnResult(result) {
+  if (result.status !== null) {
+    process.exit(result.status);
+  }
+
+  if (result.signal) {
+    const signalNumber = os.constants.signals[result.signal];
+    process.exit(signalNumber ? 128 + signalNumber : 1);
+  }
+
+  process.exit(1);
+}
+
 // ── Commands ─────────────────────────────────────────────────────
 
 async function onboard(args) {
@@ -184,7 +197,7 @@ function uninstall(args) {
       cwd: ROOT,
       env: process.env,
     });
-    process.exit(result.status || 0);
+    exitWithSpawnResult(result);
   }
 
   console.log(`  Local uninstall script not found; falling back to ${REMOTE_UNINSTALL_URL}`);
@@ -197,7 +210,7 @@ function uninstall(args) {
     cwd: ROOT,
     env: process.env,
   });
-  process.exit(result.status || 0);
+  exitWithSpawnResult(result);
 }
 
 function showStatus() {
