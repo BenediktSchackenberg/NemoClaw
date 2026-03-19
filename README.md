@@ -70,7 +70,7 @@ The sandbox image is approximately 2.4 GB compressed. During image push, the Doc
 Download and run the installer script.
 The script installs Node.js if it is not already present, then runs the guided onboard wizard to create a sandbox, configure inference, and apply security policies.
 
-```console
+```bash
 curl -fsSL https://www.nvidia.com/nemoclaw.sh | bash
 ```
 
@@ -102,16 +102,20 @@ Logs:        nemoclaw my-assistant logs --follow
 
 Connect to the sandbox, then chat with the agent through the TUI or the CLI.
 
-```console
+#### Connect to the Sandbox
+
+```bash
 nemoclaw my-assistant connect
 ```
 
+This opens the sandbox shell `sandbox@my-assistant:~$` where you can run `openclaw` commands.
+
 #### OpenClaw TUI
 
-The OpenClaw TUI opens an interactive chat interface. Type a message and press Enter to send it to the agent:
+In the sandbox shell, run the following command to open the OpenClaw TUI, which opens an interactive chat interface.
 
-```console
-sandbox@my-assistant:~$ openclaw tui
+```bash
+openclaw tui
 ```
 
 Send a test message to the agent and verify you receive a response.
@@ -120,19 +124,35 @@ Send a test message to the agent and verify you receive a response.
 >
 > The TUI is best for interactive back-and-forth. If you need the full text of a long response (for example, large code generation output), use the CLI instead:
 >
-> ```console
-> sandbox@my-assistant:~$ openclaw agent --agent main --local -m "<prompt>" --session-id <id>
+> ```bash
+> openclaw agent --agent main --local -m "<prompt>" --session-id <id>
 > ```
 >
 > This prints the complete response directly in the terminal and avoids relying on the TUI view for long output.
 
 #### OpenClaw CLI
 
-Use the OpenClaw CLI to send a single message and print the response:
+In the sandbox shell, run the following command to send a single message and print the response:
 
-```console
-sandbox@my-assistant:~$ openclaw agent --agent main --local -m "hello" --session-id test
+```bash
+openclaw agent --agent main --local -m "hello" --session-id test
 ```
+
+### Uninstall
+
+To remove NemoClaw and all resources created during setup, in the terminal outside the sandbox, run the [uninstall script](https://github.com/NVIDIA/NemoClaw/blob/main/uninstall.sh):
+
+```bash
+./uninstall.sh
+```
+
+The script removes sandboxes, the NemoClaw gateway and providers, related Docker images and containers, local state directories, and the global `nemoclaw` npm package. It does not remove shared system tooling such as Docker, Node.js, npm, or Ollama.
+
+| Flag               | Effect                                              |
+|--------------------|-----------------------------------------------------|
+| `--yes`            | Skip the confirmation prompt.                       |
+| `--keep-openshell` | Leave the `openshell` binary installed.              |
+| `--delete-models`  | Also remove NemoClaw-pulled Ollama models.           |
 
 <!-- end-quickstart-guide -->
 
@@ -219,13 +239,14 @@ See the full [CLI reference](https://docs.nvidia.com/nemoclaw/latest/reference/c
 
 Refer to the documentation for more information on NemoClaw.
 
-- [Overview](https://docs.nvidia.com/nemoclaw/latest/about/overview.html): what NemoClaw does and how it fits together
-- [How It Works](https://docs.nvidia.com/nemoclaw/latest/about/how-it-works.html): plugin, blueprint, and sandbox lifecycle
-- [Architecture](https://docs.nvidia.com/nemoclaw/latest/reference/architecture.html): plugin structure, blueprint lifecycle, and sandbox environment
-- [Inference Profiles](https://docs.nvidia.com/nemoclaw/latest/reference/inference-profiles.html): NVIDIA cloud inference configuration
-- [Network Policies](https://docs.nvidia.com/nemoclaw/latest/reference/network-policies.html): egress control and policy customization
-- [CLI Commands](https://docs.nvidia.com/nemoclaw/latest/reference/commands.html): full command reference
-- [Troubleshooting](https://docs.nvidia.com/nemoclaw/latest/reference/troubleshooting.html): common issues and resolution steps
+- [Overview](https://docs.nvidia.com/nemoclaw/latest/about/overview.html): Learn what NemoClaw does and how it fits together.
+- [How It Works](https://docs.nvidia.com/nemoclaw/latest/about/how-it-works.html): Learn about the plugin, blueprint, and sandbox lifecycle.
+- [Architecture](https://docs.nvidia.com/nemoclaw/latest/reference/architecture.html): Learn about the plugin structure, blueprint lifecycle, and sandbox environment.
+- [Inference Profiles](https://docs.nvidia.com/nemoclaw/latest/reference/inference-profiles.html): Learn about the NVIDIA cloud inference configuration.
+- [Network Policies](https://docs.nvidia.com/nemoclaw/latest/reference/network-policies.html): Learn about egress control and policy customization.
+- [CLI Commands](https://docs.nvidia.com/nemoclaw/latest/reference/commands.html): Learn about the full command reference.
+- [Troubleshooting](https://docs.nvidia.com/nemoclaw/latest/reference/troubleshooting.html): Troubleshoot common issues and resolution steps.
+- [Discord](https://discord.gg/XFpfPv9Uvx): Join the community for questions and discussion.
 
 ## License
 
