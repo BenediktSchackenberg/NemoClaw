@@ -71,7 +71,7 @@ Download and run the installer script.
 The script installs Node.js if it is not already present, then runs the guided onboard wizard to create a sandbox, configure inference, and apply security policies.
 
 ```console
-$ curl -fsSL https://www.nvidia.com/nemoclaw.sh | bash
+curl -fsSL https://www.nvidia.com/nemoclaw.sh | bash
 ```
 
 If you use nvm or fnm to manage Node.js, the installer may not update your current shell's PATH.
@@ -80,7 +80,7 @@ If `nemoclaw` is not found after install, run `source ~/.bashrc` (or `source ~/.
 To uninstall NemoClaw and remove its local state, run:
 
 ```console
-$ curl -fsSL https://raw.githubusercontent.com/NVIDIA/NemoClaw/refs/heads/main/uninstall.sh | bash
+curl -fsSL https://raw.githubusercontent.com/NVIDIA/NemoClaw/refs/heads/main/uninstall.sh | bash
 ```
 
 When the install completes, a summary confirms the running environment:
@@ -103,7 +103,7 @@ Logs:        nemoclaw my-assistant logs --follow
 Connect to the sandbox, then chat with the agent through the TUI or the CLI.
 
 ```console
-$ nemoclaw my-assistant connect
+nemoclaw my-assistant connect
 ```
 
 #### OpenClaw TUI
