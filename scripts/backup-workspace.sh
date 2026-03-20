@@ -37,6 +37,7 @@ do_backup() {
     ts="$(date +%Y%m%d-%H%M%S)"
     local dest="${BACKUP_BASE}/${ts}"
 
+    mkdir -p -m 0700 "$BACKUP_BASE"
     mkdir -p "$dest"
     echo "Backing up workspace from sandbox '${sandbox}'..."
 
@@ -58,7 +59,7 @@ do_backup() {
     done
 
     if [ "$count" -eq 0 ]; then
-        rmdir "$dest" 2>/dev/null || true
+        rm -rf "$dest" 2>/dev/null || true
         die "No files were backed up. Check that the sandbox '${sandbox}' exists and has workspace files."
     fi
 
@@ -84,17 +85,27 @@ do_restore() {
     local count=0
     for f in "${FILES[@]}"; do
         if [ -f "${src}/${f}" ]; then
-            openshell sandbox upload "$sandbox" "${src}/${f}" "${WORKSPACE_PATH}/"
-            count=$((count + 1))
+            if openshell sandbox upload "$sandbox" "${src}/${f}" "${WORKSPACE_PATH}/" 2>/dev/null; then
+                count=$((count + 1))
+            else
+                echo "  Failed to restore ${f}"
+            fi
         fi
     done
 
     for d in "${DIRS[@]}"; do
         if [ -d "${src}/${d}" ]; then
-            openshell sandbox upload "$sandbox" "${src}/${d}/" "${WORKSPACE_PATH}/${d}/"
-            count=$((count + 1))
+            if openshell sandbox upload "$sandbox" "${src}/${d}/" "${WORKSPACE_PATH}/${d}/" 2>/dev/null; then
+                count=$((count + 1))
+            else
+                echo "  Failed to restore ${d}/"
+            fi
         fi
     done
+
+    if [ "$count" -eq 0 ]; then
+        die "No files were restored. Check that the sandbox '${sandbox}' is running."
+    fi
 
     echo "Restored ${count} items to sandbox '${sandbox}'."
 }
