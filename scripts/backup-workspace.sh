@@ -37,8 +37,10 @@ do_backup() {
     ts="$(date +%Y%m%d-%H%M%S)"
     local dest="${BACKUP_BASE}/${ts}"
 
-    mkdir -p -m 0700 "$BACKUP_BASE"
+    mkdir -p "$BACKUP_BASE"
+    chmod 0700 "${HOME}/.nemoclaw" "$BACKUP_BASE" 2>/dev/null || true
     mkdir -p "$dest"
+    chmod 0700 "$dest"
     echo "Backing up workspace from sandbox '${sandbox}'..."
 
     local count=0
