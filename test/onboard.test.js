@@ -1804,4 +1804,17 @@ const { setupInference } = require(${onboardPath});
     const commands = JSON.parse(result.stdout.trim().split("\n").pop());
     assert.equal(commands.length, 3);
   });
+
+  it("re-prompts on invalid sandbox names instead of exiting in interactive mode", () => {
+    const source = fs.readFileSync(
+      path.join(import.meta.dirname, "..", "bin", "lib", "onboard.js"),
+      "utf-8",
+    );
+    // Verify the retry loop exists (while + re-prompt pattern)
+    assert.match(source, /while\s*\(true\)/);
+    assert.match(source, /Please try again/);
+    // Non-interactive still exits
+    assert.match(source, /isNonInteractive\(\)[\s\S]*?process\.exit\(1\)/);
+  });
+
 });

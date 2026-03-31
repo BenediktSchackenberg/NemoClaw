@@ -46,29 +46,6 @@ const nim = require("./nim");
 const onboardSession = require("./onboard-session");
 const policies = require("./policies");
 const { checkPortAvailable, ensureSwap, getMemoryInfo } = require("./preflight");
-
-/**
- * Create a temp file inside a directory with a cryptographically random name.
- * Uses fs.mkdtempSync (OS-level mkdtemp) to avoid predictable filenames that
- * could be exploited via symlink attacks on shared /tmp.
- * Ref: https://github.com/NVIDIA/NemoClaw/issues/1093
- */
-function secureTempFile(prefix, ext = "") {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), `${prefix}-`));
-  return path.join(dir, `${prefix}${ext}`);
-}
-
-/**
- * Safely remove a mkdtemp-created directory.  Guards against accidentally
- * deleting the system temp root if a caller passes os.tmpdir() itself.
- */
-function cleanupTempDir(filePath, expectedPrefix) {
-  const parentDir = path.dirname(filePath);
-  if (parentDir !== os.tmpdir() && path.basename(parentDir).startsWith(`${expectedPrefix}-`)) {
-    fs.rmSync(parentDir, { recursive: true, force: true });
-  }
-}
-
 const EXPERIMENTAL = process.env.NEMOCLAW_EXPERIMENTAL === "1";
 const USE_COLOR = !process.env.NO_COLOR && !!process.stdout.isTTY;
 const DIM = USE_COLOR ? "\x1b[2m" : "";
@@ -706,7 +683,7 @@ function getProbeRecovery(probe, options = {}) {
 
 // eslint-disable-next-line complexity
 function runCurlProbe(argv) {
-  const bodyFile = secureTempFile("nemoclaw-curl-probe", ".json");
+  const bodyFile = path.join(os.tmpdir(), `nemoclaw-curl-probe-${Date.now()}-${Math.random().toString(36).slice(2)}.json`);
   try {
     const args = [...argv];
     const url = args.pop();
@@ -759,7 +736,7 @@ function runCurlProbe(argv) {
       message: summarizeCurlFailure(error?.status || 1, error?.message || String(error)),
     };
   } finally {
-    cleanupTempDir(bodyFile, "nemoclaw-curl-probe");
+    fs.rmSync(bodyFile, { force: true });
   }
 }
 
@@ -950,8 +927,9 @@ function isOpenclawReady(sandboxName) {
   return Boolean(fetchGatewayAuthTokenFromSandbox(sandboxName));
 }
 
-function writeSandboxConfigSyncFile(script) {
-  const scriptFile = secureTempFile("nemoclaw-sync", ".sh");
+function writeSandboxConfigSyncFile(script, tmpDir = os.tmpdir()) {
+  const dir = fs.mkdtempSync(path.join(tmpDir, "nemoclaw-sync-"));
+  const scriptFile = path.join(dir, "sync.sh");
   fs.writeFileSync(scriptFile, `${script}\n`, { mode: 0o600 });
   return scriptFile;
 }
@@ -2263,23 +2241,33 @@ async function recoverGatewayRuntime() {
 // ── Step 3: Sandbox ──────────────────────────────────────────────
 
 async function promptValidatedSandboxName() {
-  const nameAnswer = await promptOrDefault(
-    "  Sandbox name (lowercase, numbers, hyphens) [my-assistant]: ",
-    "NEMOCLAW_SANDBOX_NAME",
-    "my-assistant",
-  );
-  const sandboxName = (nameAnswer || "my-assistant").trim().toLowerCase();
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const nameAnswer = await promptOrDefault(
+      "  Sandbox name (lowercase, numbers, hyphens) [my-assistant]: ",
+      "NEMOCLAW_SANDBOX_NAME",
+      "my-assistant",
+    );
+    const sandboxName = (nameAnswer || "my-assistant").trim().toLowerCase();
 
-  // Validate: RFC 1123 subdomain — lowercase alphanumeric and hyphens,
-  // must start and end with alphanumeric (required by Kubernetes/OpenShell)
-  if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(sandboxName)) {
+    // Validate: RFC 1123 subdomain — lowercase alphanumeric and hyphens,
+    // must start and end with alphanumeric (required by Kubernetes/OpenShell)
+    if (/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(sandboxName)) {
+      return sandboxName;
+    }
+
     console.error(`  Invalid sandbox name: '${sandboxName}'`);
     console.error("  Names must be lowercase, contain only letters, numbers, and hyphens,");
     console.error("  and must start and end with a letter or number.");
-    process.exit(1);
-  }
 
-  return sandboxName;
+    // Non-interactive runs cannot re-prompt — abort so the caller can fix the
+    // NEMOCLAW_SANDBOX_NAME env var and retry.
+    if (isNonInteractive()) {
+      process.exit(1);
+    }
+
+    console.error("  Please try again.\n");
+  }
 }
 
 // ── Step 5: Sandbox ──────────────────────────────────────────────
@@ -3208,7 +3196,7 @@ async function setupOpenclaw(sandboxName, model, provider) {
         { stdio: ["ignore", "ignore", "inherit"] },
       );
     } finally {
-      cleanupTempDir(scriptFile, "nemoclaw-sync");
+      fs.rmSync(path.dirname(scriptFile), { recursive: true, force: true });
     }
   }
 
