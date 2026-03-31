@@ -1810,11 +1810,18 @@ const { setupInference } = require(${onboardPath});
       path.join(import.meta.dirname, "..", "bin", "lib", "onboard.js"),
       "utf-8",
     );
-    // Verify the retry loop exists (while + re-prompt pattern)
-    assert.match(source, /while\s*\(true\)/);
-    assert.match(source, /Please try again/);
-    // Non-interactive still exits
-    assert.match(source, /isNonInteractive\(\)[\s\S]*?process\.exit\(1\)/);
+    // Extract the promptValidatedSandboxName function body
+    const fnMatch = source.match(
+      /async function promptValidatedSandboxName\(\)\s*\{([\s\S]*?)\n\}/,
+    );
+    assert.ok(fnMatch, "promptValidatedSandboxName function not found");
+    const fnBody = fnMatch[1];
+    // Verify the retry loop exists within this function
+    assert.match(fnBody, /while\s*\(true\)/);
+    assert.match(fnBody, /Please try again/);
+    // Non-interactive still exits within this function
+    assert.match(fnBody, /isNonInteractive\(\)/);
+    assert.match(fnBody, /process\.exit\(1\)/);
   });
 
 });
