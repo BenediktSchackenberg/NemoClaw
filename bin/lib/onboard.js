@@ -2258,7 +2258,6 @@ async function recoverGatewayRuntime() {
 
 async function promptValidatedSandboxName() {
   while (true) {
-  while (true) {
     const nameAnswer = await promptOrDefault(
       "  Sandbox name (lowercase, numbers, hyphens) [my-assistant]: ",
       "NEMOCLAW_SANDBOX_NAME",
