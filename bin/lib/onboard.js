@@ -2257,7 +2257,7 @@ async function recoverGatewayRuntime() {
 // ── Step 3: Sandbox ──────────────────────────────────────────────
 
 async function promptValidatedSandboxName() {
-  // eslint-disable-next-line no-constant-condition
+  while (true) {
   while (true) {
     const nameAnswer = await promptOrDefault(
       "  Sandbox name (lowercase, numbers, hyphens) [my-assistant]: ",
