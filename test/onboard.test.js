@@ -1823,5 +1823,4 @@ const { setupInference } = require(${onboardPath});
     assert.match(fnBody, /isNonInteractive\(\)/);
     assert.match(fnBody, /process\.exit\(1\)/);
   });
-
 });
