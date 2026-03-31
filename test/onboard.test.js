@@ -486,17 +486,23 @@ describe("onboard helpers", () => {
   });
 
   it("writes sandbox sync scripts to a temp file for stdin redirection", () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "nemoclaw-onboard-test-"));
+    const scriptFile = writeSandboxConfigSyncFile("echo test");
     try {
-      const scriptFile = writeSandboxConfigSyncFile("echo test", tmpDir);
-      expect(scriptFile).toMatch(/nemoclaw-sync-.*[/\\]sync\.sh$/);
+      expect(scriptFile).toMatch(/nemoclaw-sync.*\.sh$/);
       expect(fs.readFileSync(scriptFile, "utf8")).toBe("echo test\n");
+      // Verify the file lives inside a mkdtemp-created directory (not directly in /tmp)
+      const parentDir = path.dirname(scriptFile);
+      expect(parentDir).not.toBe(os.tmpdir());
+      expect(parentDir).toContain("nemoclaw-sync");
       if (process.platform !== "win32") {
         const stat = fs.statSync(scriptFile);
         expect(stat.mode & 0o777).toBe(0o600);
       }
     } finally {
-      fs.rmSync(tmpDir, { recursive: true, force: true });
+      const parentDir = path.dirname(scriptFile);
+      if (parentDir !== os.tmpdir() && path.basename(parentDir).startsWith("nemoclaw-sync-")) {
+        fs.rmSync(parentDir, { recursive: true, force: true });
+      }
     }
   });
 
