@@ -13,6 +13,7 @@ if (dockerHost) {
   process.env.DOCKER_HOST = dockerHost.dockerHost;
 }
 
+/** Run a shell command via bash, streaming stdout/stderr (redacted) to the terminal. Exits the process on failure unless opts.ignoreError is true. */
 function run(cmd, opts = {}) {
   const stdio = opts.stdio ?? ["ignore", "pipe", "pipe"];
   const result = spawnSync("bash", ["-c", cmd], {
@@ -29,6 +30,7 @@ function run(cmd, opts = {}) {
   return result;
 }
 
+/** Run a shell command interactively (stdin inherited) while capturing and redacting stdout/stderr. Exits the process on failure unless opts.ignoreError is true. */
 function runInteractive(cmd, opts = {}) {
   const stdio = opts.stdio ?? ["inherit", "pipe", "pipe"];
   const result = spawnSync("bash", ["-c", cmd], {
@@ -45,6 +47,7 @@ function runInteractive(cmd, opts = {}) {
   return result;
 }
 
+/** Run a shell command and return its stdout as a trimmed string. Throws a redacted error on failure, or returns '' when opts.ignoreError is true. */
 function runCapture(cmd, opts = {}) {
   try {
     return execSync(cmd, {
@@ -73,10 +76,12 @@ const SECRET_PATTERNS = [
   /(?<=(?:_KEY|API_KEY|SECRET|TOKEN|PASSWORD|CREDENTIAL)[=: ]['"]?)[A-Za-z0-9_.+/=-]{10,}/gi,
 ];
 
+/** Partially redact a matched secret string: keep the first 4 chars and replace the rest with asterisks (up to 20). */
 function redactMatch(match) {
   return match.slice(0, 4) + "*".repeat(Math.min(match.length - 4, 20));
 }
 
+/** Redact credentials from a URL string: clears url.password and blanks known auth-style query params (auth, sig, signature, token, access_token). */
 function redactUrl(value) {
   if (typeof value !== "string" || value.length === 0) return value;
   try {
@@ -95,6 +100,10 @@ function redactUrl(value) {
   }
 }
 
+/**
+ * Redact known secret patterns and authenticated URLs from a string.
+ * Non-string values are returned unchanged.
+ */
 function redact(str) {
   if (typeof str !== "string") return str;
   let out = str.replace(/https?:\/\/[^\s'"]+/g, redactUrl);
@@ -124,6 +133,7 @@ function redactError(err) {
   return err;
 }
 
+/** Write redacted stdout/stderr from a spawnSync result to the parent process streams. No-op when stdio is 'inherit' or not an array. */
 function writeRedactedResult(result, stdio) {
   if (!result || stdio === "inherit" || !Array.isArray(stdio)) return;
   if (stdio[1] === "pipe" && result.stdout) {
@@ -161,4 +171,13 @@ function validateName(name, label = "name") {
   return name;
 }
 
-module.exports = { ROOT, SCRIPTS, redact, run, runCapture, runInteractive, shellQuote, validateName };
+module.exports = {
+  ROOT,
+  SCRIPTS,
+  redact,
+  run,
+  runCapture,
+  runInteractive,
+  shellQuote,
+  validateName,
+};
