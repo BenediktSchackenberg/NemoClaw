@@ -6,7 +6,7 @@ import childProcess from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { runCapture } from "../bin/lib/runner";
 
@@ -39,7 +39,7 @@ describe("runner helpers", () => {
     // @ts-expect-error — intentional partial mock for testing
     childProcess.spawnSync = (...args) => {
       calls.push(args);
-      return { status: 0 };
+      return { status: 0, stdout: "", stderr: "" };
     };
 
     try {
@@ -53,8 +53,8 @@ describe("runner helpers", () => {
     }
 
     expect(calls).toHaveLength(2);
-    expect(calls[0][2].stdio).toEqual(["ignore", "inherit", "inherit"]);
-    expect(calls[1][2].stdio).toBe("inherit");
+    expect(calls[0][2].stdio).toEqual(["ignore", "pipe", "pipe"]);
+    expect(calls[1][2].stdio).toEqual(["inherit", "pipe", "pipe"]);
   });
 });
 
@@ -83,7 +83,7 @@ describe("runner env merging", () => {
     // @ts-expect-error — intentional partial mock for testing
     childProcess.spawnSync = (...args) => {
       calls.push(args);
-      return { status: 0 };
+      return { status: 0, stdout: "", stderr: "" };
     };
 
     try {
@@ -239,6 +239,20 @@ describe("redact", () => {
     expect(output).toContain(" ");
   });
 
+  it("masks URL credentials and auth query parameters", () => {
+    const { redact } = require(runnerPath);
+    const output = redact(
+      "https://alice:secret@example.com/v1/models?auth=abc123456789&sig=def987654321&keep=yes"
+    );
+    expect(output).toBe("https://alice:****@example.com/v1/models?auth=****&sig=****&keep=yes");
+  });
+
+  it("masks auth-style query parameters case-insensitively", () => {
+    const { redact } = require(runnerPath);
+    const output = redact("https://example.com?Signature=secret123456&AUTH=anothersecret123");
+    expect(output).toBe("https://example.com/?Signature=****&AUTH=****");
+  });
+
   it("leaves non-secret strings untouched", () => {
     const { redact } = require(runnerPath);
     expect(redact("docker run --name my-sandbox")).toBe("docker run --name my-sandbox");
@@ -314,6 +328,71 @@ describe("regression guards", () => {
       expect(error.output[1]).toContain("****");
     } finally {
       childProcess.execSync = originalExecSync;
+      delete require.cache[require.resolve(runnerPath)];
+    }
+  });
+
+  it("run redacts captured child output before printing on failure", () => {
+    const originalSpawnSync = childProcess.spawnSync;
+    const originalExit = process.exit;
+    const stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    // @ts-expect-error — intentional partial mock for testing
+    childProcess.spawnSync = () => ({
+      status: 1,
+      stdout: "token ghp_abcdefghijklmnopqrstuvwxyz1234567890\n",
+      stderr: 'export SERVICE_KEY="supersecretvalue12345"\n',
+    });
+    process.exit = ((code) => {
+      throw new Error(`exit:${code}`);
+    });
+
+    try {
+      delete require.cache[require.resolve(runnerPath)];
+      const { run } = require(runnerPath);
+      expect(() => run("echo fail")).toThrow("exit:1");
+      expect(stdoutSpy).toHaveBeenCalledWith("token ghp_********************\n");
+      expect(stderrSpy).toHaveBeenCalledWith('export SERVICE_KEY="supe*****************"\n');
+      expect(errorSpy).toHaveBeenCalledWith("  Command failed (exit 1): echo fail");
+    } finally {
+      childProcess.spawnSync = originalSpawnSync;
+      process.exit = originalExit;
+      stdoutSpy.mockRestore();
+      stderrSpy.mockRestore();
+      errorSpy.mockRestore();
+      delete require.cache[require.resolve(runnerPath)];
+    }
+  });
+
+  it("runInteractive keeps stdin inherited while redacting captured output", () => {
+    const originalSpawnSync = childProcess.spawnSync;
+    const stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    const calls = [];
+
+    // @ts-expect-error — intentional partial mock for testing
+    childProcess.spawnSync = (...args) => {
+      calls.push(args);
+      return {
+        status: 0,
+        stdout: "visit https://alice:secret@example.com/?token=abc123456789\n",
+        stderr: "",
+      };
+    };
+
+    try {
+      delete require.cache[require.resolve(runnerPath)];
+      const { runInteractive } = require(runnerPath);
+      runInteractive("echo interactive");
+      expect(calls[0][2].stdio).toEqual(["inherit", "pipe", "pipe"]);
+      expect(stdoutSpy).toHaveBeenCalledWith("visit https://alice:****@example.com/?token=****\n");
+      expect(stderrSpy).not.toHaveBeenCalled();
+    } finally {
+      childProcess.spawnSync = originalSpawnSync;
+      stdoutSpy.mockRestore();
+      stderrSpy.mockRestore();
       delete require.cache[require.resolve(runnerPath)];
     }
   });

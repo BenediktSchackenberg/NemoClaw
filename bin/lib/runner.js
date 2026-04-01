@@ -14,13 +14,14 @@ if (dockerHost) {
 }
 
 function run(cmd, opts = {}) {
-  const stdio = opts.stdio ?? ["ignore", "inherit", "inherit"];
+  const stdio = opts.stdio ?? ["ignore", "pipe", "pipe"];
   const result = spawnSync("bash", ["-c", cmd], {
     ...opts,
     stdio,
     cwd: ROOT,
     env: { ...process.env, ...opts.env },
   });
+  writeRedactedResult(result, stdio);
   if (result.status !== 0 && !opts.ignoreError) {
     console.error(`  Command failed (exit ${result.status}): ${redact(cmd).slice(0, 80)}`);
     process.exit(result.status || 1);
@@ -29,13 +30,14 @@ function run(cmd, opts = {}) {
 }
 
 function runInteractive(cmd, opts = {}) {
-  const stdio = opts.stdio ?? "inherit";
+  const stdio = opts.stdio ?? ["inherit", "pipe", "pipe"];
   const result = spawnSync("bash", ["-c", cmd], {
     ...opts,
     stdio,
     cwd: ROOT,
     env: { ...process.env, ...opts.env },
   });
+  writeRedactedResult(result, stdio);
   if (result.status !== 0 && !opts.ignoreError) {
     console.error(`  Command failed (exit ${result.status}): ${redact(cmd).slice(0, 80)}`);
     process.exit(result.status || 1);
@@ -71,11 +73,33 @@ const SECRET_PATTERNS = [
   /(?<=(?:_KEY|API_KEY|SECRET|TOKEN|PASSWORD|CREDENTIAL)[=: ]['"]?)[A-Za-z0-9_.+/=-]{10,}/gi,
 ];
 
+function redactMatch(match) {
+  return match.slice(0, 4) + "*".repeat(Math.min(match.length - 4, 20));
+}
+
+function redactUrl(value) {
+  if (typeof value !== "string" || value.length === 0) return value;
+  try {
+    const url = new URL(value);
+    if (url.password) {
+      url.password = "****";
+    }
+    for (const key of [...url.searchParams.keys()]) {
+      if (/(^|[-_])(?:signature|sig|token|auth|access_token)$/i.test(key)) {
+        url.searchParams.set(key, "****");
+      }
+    }
+    return url.toString();
+  } catch {
+    return value;
+  }
+}
+
 function redact(str) {
   if (typeof str !== "string") return str;
-  let out = str;
+  let out = str.replace(/https?:\/\/[^\s'"]+/g, redactUrl);
   for (const pat of SECRET_PATTERNS) {
-    out = out.replace(pat, (match) => match.slice(0, 4) + "*".repeat(Math.min(match.length - 4, 20)));
+    out = out.replace(pat, redactMatch);
   }
   return out;
 }
@@ -98,6 +122,16 @@ function redactError(err) {
     err.stack = err.stack.replaceAll(originalMessage, err.message);
   }
   return err;
+}
+
+function writeRedactedResult(result, stdio) {
+  if (!result || stdio === "inherit" || !Array.isArray(stdio)) return;
+  if (stdio[1] === "pipe" && result.stdout) {
+    process.stdout.write(redact(result.stdout.toString()));
+  }
+  if (stdio[2] === "pipe" && result.stderr) {
+    process.stderr.write(redact(result.stderr.toString()));
+  }
 }
 
 /**
