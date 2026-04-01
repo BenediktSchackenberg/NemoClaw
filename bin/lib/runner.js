@@ -91,6 +91,13 @@ function runCapture(cmd, opts = {}) {
     if (err.stdout) {
       err.stdout = redactSecrets(err.stdout);
     }
+    if (Array.isArray(err.output)) {
+      err.output = err.output.map((chunk, idx) => {
+        // output[0] is stdin placeholder — skip; redact textual outputs only
+        if (idx === 0 || chunk == null) return chunk;
+        return redactSecrets(chunk);
+      });
+    }
     throw err;
   }
 }
@@ -122,4 +129,13 @@ function validateName(name, label = "name") {
   return name;
 }
 
-module.exports = { ROOT, SCRIPTS, run, runCapture, runInteractive, shellQuote, validateName, redactSecrets };
+module.exports = {
+  ROOT,
+  SCRIPTS,
+  run,
+  runCapture,
+  runInteractive,
+  shellQuote,
+  validateName,
+  redactSecrets,
+};

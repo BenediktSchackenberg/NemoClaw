@@ -166,4 +166,19 @@ describe("redactSecrets", () => {
       expect(String(err.stderr || "")).not.toContain("nvapi-realSecret");
     }
   });
+
+  it("runCapture() thrown error redacts err.output array", () => {
+    try {
+      runCapture("bash -lc 'echo GITHUB_TOKEN=ghp_secretOutputValue >&2; exit 1'");
+      throw new Error("expected runCapture to throw");
+    } catch (err) {
+      if (Array.isArray(err.output)) {
+        for (const chunk of err.output) {
+          if (chunk != null) {
+            expect(String(chunk)).not.toContain("ghp_secretOutputValue");
+          }
+        }
+      }
+    }
+  });
 });
