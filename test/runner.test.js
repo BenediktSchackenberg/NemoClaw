@@ -184,7 +184,7 @@ describe("redact", () => {
   it("masks bearer tokens", () => {
     const { redact } = require(runnerPath);
     expect(redact("Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.payload")).toBe(
-      "Authorization: Bearer eyJh********************"
+      "Authorization: Bearer eyJh********************",
     );
   });
 
@@ -242,7 +242,7 @@ describe("redact", () => {
   it("masks URL credentials and auth query parameters", () => {
     const { redact } = require(runnerPath);
     const output = redact(
-      "https://alice:secret@example.com/v1/models?auth=abc123456789&sig=def987654321&keep=yes"
+      "https://alice:secret@example.com/v1/models?auth=abc123456789&sig=def987654321&keep=yes",
     );
     expect(output).toBe("https://alice:****@example.com/v1/models?auth=****&sig=****&keep=yes");
   });
@@ -272,7 +272,7 @@ describe("regression guards", () => {
     const originalExecSync = childProcess.execSync;
     childProcess.execSync = () => {
       throw new Error(
-        'command failed: export SERVICE_KEY="supersecretvalue12345" ghp_abcdefghijklmnopqrstuvwxyz1234567890'
+        'command failed: export SERVICE_KEY="supersecretvalue12345" ghp_abcdefghijklmnopqrstuvwxyz1234567890',
       );
     };
 
@@ -300,7 +300,7 @@ describe("regression guards", () => {
   it("runCapture redacts execSync error cmd/output fields", () => {
     const originalExecSync = childProcess.execSync;
     childProcess.execSync = () => {
-      const err = new Error("command failed");
+      const err = /** @type {any} */ (new Error("command failed"));
       err.cmd = "echo nvapi-aaaabbbbcccc1111 && echo ghp_abcdefghijklmnopqrstuvwxyz123456";
       err.output = ["stdout: nvapi-aaaabbbbcccc1111", "stderr: PASSWORD=secret123456"];
       throw err;
@@ -314,7 +314,7 @@ describe("regression guards", () => {
       try {
         runCapture("echo nope");
       } catch (err) {
-        error = err;
+        error = /** @type {any} */ (err);
       }
 
       expect(error).toBeDefined();
@@ -345,9 +345,9 @@ describe("regression guards", () => {
       stdout: "token ghp_abcdefghijklmnopqrstuvwxyz1234567890\n",
       stderr: 'export SERVICE_KEY="supersecretvalue12345"\n',
     });
-    process.exit = ((code) => {
+    process.exit = (code) => {
       throw new Error(`exit:${code}`);
-    });
+    };
 
     try {
       delete require.cache[require.resolve(runnerPath)];
