@@ -73,6 +73,18 @@ ENV NEMOCLAW_MODEL=${NEMOCLAW_MODEL} \
     NEMOCLAW_INFERENCE_COMPAT_B64=${NEMOCLAW_INFERENCE_COMPAT_B64} \
     NEMOCLAW_DISABLE_DEVICE_AUTH=${NEMOCLAW_DISABLE_DEVICE_AUTH}
 
+# Audit trail integrity: create log directory owned by root, with the audit
+# file append-only so the sandbox user cannot modify or truncate existing
+# entries. The sandbox group gets write (append) access via 0620 perms.
+RUN mkdir -p /var/log/nemoclaw \
+    && chown root:sandbox /var/log/nemoclaw \
+    && chmod 750 /var/log/nemoclaw \
+    && touch /var/log/nemoclaw/audit.jsonl \
+    && chown root:sandbox /var/log/nemoclaw/audit.jsonl \
+    && chmod 0620 /var/log/nemoclaw/audit.jsonl \
+    && (chattr +a /var/log/nemoclaw/audit.jsonl 2>/dev/null \
+        || echo "[WARN] chattr +a not supported on this filesystem — relying on DAC permissions" >&2)
+
 WORKDIR /sandbox
 USER sandbox
 
