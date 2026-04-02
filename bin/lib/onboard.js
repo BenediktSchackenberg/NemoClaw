@@ -503,7 +503,13 @@ async function promptValidationRecovery(label, recovery, credentialEnv = null, h
       .trim()
       .toLowerCase();
     // Guard against the user accidentally pasting an API key at this prompt.
-    if (choice.startsWith("nvapi-") || choice.startsWith("ghp_") || choice.length > 40) {
+    // Tokens don't contain spaces; human sentences do — add !choice.includes(" ") to
+    // avoid false-positives on long typed sentences (e.g. 52-char help request).
+    if (
+      choice.startsWith("nvapi-") ||
+      choice.startsWith("ghp_") ||
+      (!choice.includes(" ") && choice.length > 40)
+    ) {
       console.log("  ⚠️  That looks like an API key — do not paste credentials here.");
       console.log("  Treating as 'retry'. You will be prompted to enter the key securely.");
       const validator = credentialEnv === "NVIDIA_API_KEY" ? validateNvidiaApiKeyValue : null;
