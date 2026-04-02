@@ -19,7 +19,11 @@ REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 DASHBOARD_PORT="${DASHBOARD_PORT:-18789}"
 
 # ── Parse flags ──────────────────────────────────────────────────
-SANDBOX_NAME="${NEMOCLAW_SANDBOX:-${SANDBOX_NAME:-default}}"
+# SANDBOX_NAME precedence: --sandbox flag > SANDBOX_NAME env > NEMOCLAW_SANDBOX env > "default"
+# Using SANDBOX_NAME:-... (not NEMOCLAW_SANDBOX:-SANDBOX_NAME:-...) ensures an explicit
+# caller-set SANDBOX_NAME is not silently overridden by a stale NEMOCLAW_SANDBOX export.
+_SANDBOX_DEFAULT="${NEMOCLAW_SANDBOX:-default}"
+SANDBOX_NAME="${SANDBOX_NAME:-$_SANDBOX_DEFAULT}"
 ACTION="start"
 
 while [ $# -gt 0 ]; do
