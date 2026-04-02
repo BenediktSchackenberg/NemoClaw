@@ -77,4 +77,19 @@ describe("credential exposure in process arguments", () => {
     expect(src).toMatch(/"--connect-timeout", "10"/);
     expect(src).toMatch(/"--max-time", "60"/);
   });
+
+  it("api-key paste-guard in credential recovery prompt uses space-aware heuristic", () => {
+    const src = fs.readFileSync(ONBOARD_JS, "utf-8");
+
+    // The guard must check for nvapi-/ghp_ prefixes AND a no-space+length check.
+    // It must NOT use a bare choice.length > 40 (false-positives on typed sentences).
+    expect(src).toMatch(/choice\.startsWith\("nvapi-"\)/);
+    expect(src).toMatch(/choice\.startsWith\("ghp_"\)/);
+    // Space-aware length check: !choice.includes(" ") && choice.length > 40
+    expect(src).toMatch(
+      /!choice\.includes\(" "\).*choice\.length > 40|choice\.length > 40.*!choice\.includes\(" "\)/,
+    );
+    // Must NOT use bare choice.length > 40 without the space guard
+    expect(src).not.toMatch(/\(choice\.length > 40\)/);
+  });
 });
