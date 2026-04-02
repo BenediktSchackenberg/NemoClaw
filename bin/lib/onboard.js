@@ -1562,6 +1562,10 @@ async function preflight() {
       iMaj > eMaj ||
       (iMaj === eMaj && iMin > eMin) ||
       (iMaj === eMaj && iMin === eMin && iPatch > ePatch);
+    const isOlder =
+      iMaj < eMaj ||
+      (iMaj === eMaj && iMin < eMin) ||
+      (iMaj === eMaj && iMin === eMin && iPatch < ePatch);
     if (isNewer) {
       console.error("");
       console.error(
@@ -1573,6 +1577,14 @@ async function preflight() {
       console.error(
         `  If you experience issues, reinstall the tested version: curl -fsSL https://install.nemoclaw.ai | bash`,
       );
+      console.error("");
+    } else if (isOlder) {
+      console.error("");
+      console.error(
+        `  ⚠️  OpenShell ${installedMatch[1]} is older than the tested version ${EXPECTED_OPENSHELL_VERSION}.`,
+      );
+      console.error("  This version may cause onboarding or runtime failures. Please upgrade:");
+      console.error(`  curl -fsSL https://install.nemoclaw.ai | bash`);
       console.error("");
     }
   }
