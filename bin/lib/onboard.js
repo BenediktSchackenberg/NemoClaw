@@ -2067,9 +2067,35 @@ async function preflight() {
       process.exit(1);
     }
   }
-  console.log(
-    `  ✓ openshell CLI: ${runCaptureOpenshell(["--version"], { ignoreError: true }) || "unknown"}`,
-  );
+  const openshellVersionRaw =
+    runCaptureOpenshell(["--version"], { ignoreError: true }) || "unknown";
+  console.log(`  ✓ openshell CLI: ${openshellVersionRaw}`);
+
+  // Warn if the installed OpenShell version differs from the version NemoClaw
+  // was tested with. Running a newer OpenShell can break sandbox compatibility.
+  const EXPECTED_OPENSHELL_VERSION = "0.0.7";
+  const installedMatch = openshellVersionRaw.match(/(\d+\.\d+\.\d+)/);
+  if (installedMatch && installedMatch[1] !== EXPECTED_OPENSHELL_VERSION) {
+    const [iMaj, iMin, iPatch] = installedMatch[1].split(".").map(Number);
+    const [eMaj, eMin, ePatch] = EXPECTED_OPENSHELL_VERSION.split(".").map(Number);
+    const isNewer =
+      iMaj > eMaj ||
+      (iMaj === eMaj && iMin > eMin) ||
+      (iMaj === eMaj && iMin === eMin && iPatch > ePatch);
+    if (isNewer) {
+      console.error("");
+      console.error(
+        `  ⚠️  OpenShell ${installedMatch[1]} is newer than the tested version ${EXPECTED_OPENSHELL_VERSION}.`,
+      );
+      console.error(
+        "  Upgrading OpenShell independently (e.g. 'openshell self-update') can break NemoClaw sandbox compatibility.",
+      );
+      console.error(
+        `  If you experience issues, reinstall the tested version: curl -fsSL https://install.nemoclaw.ai | bash`,
+      );
+      console.error("");
+    }
+  }
   if (openshellInstall.futureShellPathHint) {
     console.log(
       `  Note: openshell was installed to ${openshellInstall.localBin} for this onboarding run.`,
