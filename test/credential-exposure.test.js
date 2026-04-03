@@ -94,18 +94,23 @@ describe("credential exposure in process arguments", () => {
     expect(probeSrc).toMatch(/"--max-time", "60"/);
   });
 
-  it("api-key paste-guard in credential recovery prompt uses space-aware heuristic", () => {
+  it("api-key paste-guard uses extensible prefix list and regex fallback", () => {
     const src = fs.readFileSync(ONBOARD_JS, "utf-8");
 
-    // The guard must check for nvapi-/ghp_ prefixes AND a no-space+length check.
-    // It must NOT use a bare choice.length > 40 (false-positives on typed sentences).
-    expect(src).toMatch(/choice\.startsWith\("nvapi-"\)/);
-    expect(src).toMatch(/choice\.startsWith\("ghp_"\)/);
-    // Space-aware length check: !choice.includes(" ") && choice.length > 40
-    expect(src).toMatch(
-      /!choice\.includes\(" "\).*choice\.length > 40|choice\.length > 40.*!choice\.includes\(" "\)/,
-    );
-    // Must NOT use bare choice.length > 40 without the space guard
-    expect(src).not.toMatch(/\(choice\.length > 40\)/);
+    // Known prefix list must include at least NVIDIA and GitHub prefixes
+    expect(src).toMatch(/API_KEY_PREFIXES/);
+    expect(src).toMatch(/"nvapi-"/);
+    expect(src).toMatch(/"ghp_"/);
+    // Space-aware length check must be present
+    expect(src).toMatch(/!choice\.includes\(" "\).*choice\.length > 40/);
+    // Regex fallback for base64-safe tokens must be present
+    expect(src).toMatch(/\/\^\[A-Za-z0-9/);
+    // Validator must be hoisted (defined once, not inside both branches)
+    const validatorCount = (
+      src.match(/const validator = credentialEnv === "NVIDIA_API_KEY"/g) || []
+    ).length;
+    expect(validatorCount).toBeLessThanOrEqual(1);
+    // looksLikeToken variable must exist
+    expect(src).toMatch(/looksLikeToken/);
   });
 });
