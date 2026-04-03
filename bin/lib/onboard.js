@@ -691,16 +691,18 @@ async function promptValidationRecovery(label, recovery, credentialEnv = null, h
       .trim()
       .toLowerCase();
     // Guard against the user accidentally pasting an API key at this prompt.
-    // Tokens don't contain spaces; human sentences do — add !choice.includes(" ") to
-    // avoid false-positives on long typed sentences (e.g. 52-char help request).
-    if (
-      choice.startsWith("nvapi-") ||
-      choice.startsWith("ghp_") ||
-      (!choice.includes(" ") && choice.length > 40)
-    ) {
+    // Tokens don't contain spaces; human sentences do — the no-space + length check
+    // avoids false-positives on long typed sentences.
+    const API_KEY_PREFIXES = ["nvapi-", "ghp_", "gcm-", "sk-", "gpt-", "gemini-", "nvcf-"];
+    const looksLikeToken =
+      API_KEY_PREFIXES.some((p) => choice.startsWith(p)) ||
+      (!choice.includes(" ") && choice.length > 40) ||
+      // Regex fallback: base64-safe token pattern (20+ chars, no spaces, mixed alphanum)
+      /^[A-Za-z0-9_\-\.]{20,}$/.test(choice);
+    const validator = credentialEnv === "NVIDIA_API_KEY" ? validateNvidiaApiKeyValue : null;
+    if (looksLikeToken) {
       console.log("  ⚠️  That looks like an API key — do not paste credentials here.");
       console.log("  Treating as 'retry'. You will be prompted to enter the key securely.");
-      const validator = credentialEnv === "NVIDIA_API_KEY" ? validateNvidiaApiKeyValue : null;
       await replaceNamedCredential(credentialEnv, `${label} API key`, helpUrl, validator);
       return "credential";
     }
@@ -713,7 +715,6 @@ async function promptValidationRecovery(label, recovery, credentialEnv = null, h
       exitOnboardFromPrompt();
     }
     if (choice === "" || choice === "retry") {
-      const validator = credentialEnv === "NVIDIA_API_KEY" ? validateNvidiaApiKeyValue : null;
       await replaceNamedCredential(credentialEnv, `${label} API key`, helpUrl, validator);
       return "credential";
     }
