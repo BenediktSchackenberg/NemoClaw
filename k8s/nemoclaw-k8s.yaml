@@ -30,8 +30,9 @@ spec:
         requests:
           memory: "8Gi"
           cpu: "2"
-
-    # Workspace - runs official NemoClaw installer
+        limits:
+          memory: "16Gi"
+          cpu: "4"
     - name: workspace
       image: node:22
       command:
@@ -98,6 +99,9 @@ spec:
         requests:
           memory: "4Gi"
           cpu: "2"
+        limits:
+          memory: "8Gi"
+          cpu: "4"
 
   initContainers:
     # Configure Docker daemon for cgroup v2
