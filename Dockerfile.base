@@ -65,7 +65,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libcap2-bin=1:2.66-4+deb12u2+b2 \
         procps=2:4.0.2-3 \
         openssh-sftp-server=1:9.2p1-2+deb12u9 \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    # Create python -> python3 symlink so scripts using the bare `python`
+    # command work inside the sandbox without additional setup. (#1452)
+    && ln -s /usr/bin/python3 /usr/local/bin/python
 
 # gosu for privilege separation (gateway vs sandbox user).
 # Install from GitHub release with checksum verification instead of
