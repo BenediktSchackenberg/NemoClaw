@@ -30,9 +30,11 @@ spec:
         requests:
           memory: "8Gi"
           cpu: "2"
+          ephemeral-storage: "20Gi"
         limits:
           memory: "16Gi"
           cpu: "4"
+          ephemeral-storage: "40Gi"
     - name: workspace
       image: node:22
       command:
@@ -99,9 +101,11 @@ spec:
         requests:
           memory: "4Gi"
           cpu: "2"
+          ephemeral-storage: "4Gi"
         limits:
           memory: "8Gi"
           cpu: "4"
+          ephemeral-storage: "8Gi"
 
   initContainers:
     # Configure Docker daemon for cgroup v2
@@ -114,7 +118,8 @@ spec:
 
   volumes:
     - name: docker-storage
-      emptyDir: {}
+      emptyDir:
+        sizeLimit: "40Gi"
     - name: docker-socket
       emptyDir: {}
     - name: docker-config
