@@ -1787,10 +1787,14 @@ async function preflight() {
   if (gatewayReuseState === "stale" || gatewayReuseState === "active-unnamed") {
     console.log("  Cleaning up previous NemoClaw session...");
     runOpenshell(["forward", "stop", "18789"], { ignoreError: true });
-    runOpenshell(["gateway", "destroy", "-g", GATEWAY_NAME], { ignoreError: true });
+    const destroyResult = runOpenshell(["gateway", "destroy", "-g", GATEWAY_NAME], {
+      ignoreError: true,
+    });
     // Sandboxes under the destroyed gateway no longer exist in OpenShell —
     // clear the local registry so `nemoclaw list` stays consistent. (#532)
-    registry.clearAll();
+    if (destroyResult.status === 0) {
+      registry.clearAll();
+    }
     console.log("  ✓ Previous session cleaned up");
   }
 
