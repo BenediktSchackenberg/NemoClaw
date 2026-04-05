@@ -2077,7 +2077,18 @@ async function preflight() {
 
   // Warn if the installed OpenShell version differs from the version NemoClaw
   // was tested with. Running a newer OpenShell can break sandbox compatibility.
-  const EXPECTED_OPENSHELL_VERSION = "0.0.7";
+  // Read the expected version from install-openshell.sh (single source of truth)
+  // so this check stays in sync when the script is updated.
+  const installScript = path.join(SCRIPTS, "install-openshell.sh");
+  let EXPECTED_OPENSHELL_VERSION = null;
+  try {
+    const scriptContent = fs.readFileSync(installScript, "utf-8");
+    const match = scriptContent.match(/^MIN_VERSION="([^"]+)"/m);
+    if (match) EXPECTED_OPENSHELL_VERSION = match[1];
+  } catch {
+    /* install script not found — skip version check */
+  }
+  const INSTALL_URL = "https://www.nvidia.com/nemoclaw.sh";
   if (installedVersion && installedVersion !== EXPECTED_OPENSHELL_VERSION) {
     const [iMaj, iMin, iPatch] = installedVersion.split(".").map(Number);
     const [eMaj, eMin, ePatch] = EXPECTED_OPENSHELL_VERSION.split(".").map(Number);
@@ -2098,7 +2109,7 @@ async function preflight() {
         "  Upgrading OpenShell independently (e.g. 'openshell self-update') can break NemoClaw sandbox compatibility.",
       );
       console.error(
-        `  If you experience issues, reinstall the tested version: curl -fsSL https://install.nemoclaw.ai | bash`,
+        `  If you experience issues, reinstall the tested version: curl -fsSL ${INSTALL_URL} | bash`,
       );
       console.error("");
     } else if (isOlder) {
@@ -2107,7 +2118,7 @@ async function preflight() {
         `  ⚠️  OpenShell ${installedVersion} is older than the tested version ${EXPECTED_OPENSHELL_VERSION}.`,
       );
       console.error("  This version may cause onboarding or runtime failures. Please upgrade:");
-      console.error(`  curl -fsSL https://install.nemoclaw.ai | bash`);
+      console.error(`  curl -fsSL ${INSTALL_URL} | bash`);
       console.error("");
     }
   }
