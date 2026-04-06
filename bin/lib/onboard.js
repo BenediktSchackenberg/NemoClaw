@@ -1510,6 +1510,70 @@ function getNonInteractiveModel(providerKey) {
 // ── Step 1: Preflight ────────────────────────────────────────────
 
 // eslint-disable-next-line complexity
+const OPENSHELL_INSTALL_URL = "https://www.nvidia.com/nemoclaw.sh";
+
+/**
+ * Read the minimum required OpenShell version from scripts/install-openshell.sh.
+ * Returns null if the file is missing or the MIN_VERSION line can't be parsed.
+ */
+function getExpectedOpenshellVersion() {
+  const installScript = path.join(SCRIPTS, "install-openshell.sh");
+  try {
+    const scriptContent = fs.readFileSync(installScript, "utf-8");
+    const match = scriptContent.match(/^MIN_VERSION="([^"]+)"/m);
+    if (match) return match[1];
+    note(
+      "[preflight] install-openshell.sh found but MIN_VERSION line not parseable — skipping version check",
+    );
+    return null;
+  } catch {
+    return null; // file missing — skip version check silently
+  }
+}
+
+/**
+ * Emit a warning if the installed OpenShell version differs from the tested baseline.
+ * Silently skips if the installed version or expected version can't be determined.
+ */
+function warnOnOpenshellVersionMismatch(installedVersion) {
+  if (!installedVersion) return;
+  const expectedVersion = getExpectedOpenshellVersion();
+  if (!expectedVersion || installedVersion === expectedVersion) return;
+
+  const [iMaj, iMin, iPatch] = installedVersion.split(".").map(Number);
+  const [eMaj, eMin, ePatch] = expectedVersion.split(".").map(Number);
+  const isNewer =
+    iMaj > eMaj ||
+    (iMaj === eMaj && iMin > eMin) ||
+    (iMaj === eMaj && iMin === eMin && iPatch > ePatch);
+  const isOlder =
+    iMaj < eMaj ||
+    (iMaj === eMaj && iMin < eMin) ||
+    (iMaj === eMaj && iMin === eMin && iPatch < ePatch);
+
+  if (isNewer) {
+    console.error("");
+    console.error(
+      `  ⚠️  OpenShell ${installedVersion} is newer than the tested version ${expectedVersion}.`,
+    );
+    console.error(
+      "  Upgrading OpenShell independently (e.g. 'openshell self-update') can break NemoClaw sandbox compatibility.",
+    );
+    console.error(
+      `  If you experience issues, reinstall the tested version: curl -fsSL ${OPENSHELL_INSTALL_URL} | bash`,
+    );
+    console.error("");
+  } else if (isOlder) {
+    console.error("");
+    console.error(
+      `  ⚠️  OpenShell ${installedVersion} is older than the tested version ${expectedVersion}.`,
+    );
+    console.error("  This version may cause onboarding or runtime failures. Please upgrade:");
+    console.error(`  curl -fsSL ${OPENSHELL_INSTALL_URL} | bash`);
+    console.error("");
+  }
+}
+
 async function preflight() {
   step(1, 8, "Preflight checks");
 
@@ -1557,51 +1621,7 @@ async function preflight() {
 
   // Warn if the installed OpenShell version differs from the version NemoClaw
   // was tested with. Running a newer OpenShell can break sandbox compatibility.
-  // Read the expected version from install-openshell.sh (single source of truth)
-  // so this check stays in sync when the script is updated.
-  const installScript = path.join(SCRIPTS, "install-openshell.sh");
-  let EXPECTED_OPENSHELL_VERSION = null;
-  try {
-    const scriptContent = fs.readFileSync(installScript, "utf-8");
-    const match = scriptContent.match(/^MIN_VERSION="([^"]+)"/m);
-    if (match) EXPECTED_OPENSHELL_VERSION = match[1];
-  } catch {
-    /* install script not found — skip version check */
-  }
-  const INSTALL_URL = "https://www.nvidia.com/nemoclaw.sh";
-  if (installedVersion && installedVersion !== EXPECTED_OPENSHELL_VERSION) {
-    const [iMaj, iMin, iPatch] = installedVersion.split(".").map(Number);
-    const [eMaj, eMin, ePatch] = EXPECTED_OPENSHELL_VERSION.split(".").map(Number);
-    const isNewer =
-      iMaj > eMaj ||
-      (iMaj === eMaj && iMin > eMin) ||
-      (iMaj === eMaj && iMin === eMin && iPatch > ePatch);
-    const isOlder =
-      iMaj < eMaj ||
-      (iMaj === eMaj && iMin < eMin) ||
-      (iMaj === eMaj && iMin === eMin && iPatch < ePatch);
-    if (isNewer) {
-      console.error("");
-      console.error(
-        `  ⚠️  OpenShell ${installedVersion} is newer than the tested version ${EXPECTED_OPENSHELL_VERSION}.`,
-      );
-      console.error(
-        "  Upgrading OpenShell independently (e.g. 'openshell self-update') can break NemoClaw sandbox compatibility.",
-      );
-      console.error(
-        `  If you experience issues, reinstall the tested version: curl -fsSL ${INSTALL_URL} | bash`,
-      );
-      console.error("");
-    } else if (isOlder) {
-      console.error("");
-      console.error(
-        `  ⚠️  OpenShell ${installedVersion} is older than the tested version ${EXPECTED_OPENSHELL_VERSION}.`,
-      );
-      console.error("  This version may cause onboarding or runtime failures. Please upgrade:");
-      console.error(`  curl -fsSL ${INSTALL_URL} | bash`);
-      console.error("");
-    }
-  }
+  warnOnOpenshellVersionMismatch(installedVersion);
   if (openshellInstall.futureShellPathHint) {
     console.log(
       `  Note: openshell was installed to ${openshellInstall.localBin} for this onboarding run.`,
@@ -4031,6 +4051,8 @@ module.exports = {
   getNavigationChoice,
   getSandboxInferenceConfig,
   getInstalledOpenshellVersion,
+  getExpectedOpenshellVersion,
+  warnOnOpenshellVersionMismatch,
   getRequestedModelHint,
   getRequestedProviderHint,
   getStableGatewayImageRef,
