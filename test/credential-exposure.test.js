@@ -103,13 +103,13 @@ describe("credential exposure in process arguments", () => {
     expect(src).toMatch(/"ghp_"/);
     // Space-aware length check must be present
     expect(src).toMatch(/!choice\.includes\(" "\).*choice\.length > 40/);
-    // Regex fallback for base64-safe tokens must be present
-    expect(src).toMatch(/\/\^\[A-Za-z0-9/);
-    // Validator must be hoisted (defined once, not inside both branches)
+    // Regex fallback for base64-safe tokens must be present (full shape)
+    expect(src).toMatch(/\/\^\[A-Za-z0-9_\\-\\.\]\{20,\}\$\/\.test\(choice\)/);
+    // Validator must be hoisted (defined exactly once, not inside both branches)
     const validatorCount = (
       src.match(/const validator = credentialEnv === "NVIDIA_API_KEY"/g) || []
     ).length;
-    expect(validatorCount).toBeLessThanOrEqual(1);
+    expect(validatorCount).toBe(1);
     // looksLikeToken variable must exist
     expect(src).toMatch(/looksLikeToken/);
   });
