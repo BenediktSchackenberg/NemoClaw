@@ -60,8 +60,8 @@ The following endpoint groups are allowed by default:
 
 * - `npm_registry`
   - `registry.npmjs.org:443`
-  - `/usr/local/bin/openclaw`, `/usr/local/bin/npm`, `/usr/local/bin/node`
-  - All methods, all paths
+  - `/usr/local/bin/openclaw` only (openclaw plugins install)
+  - GET only
 
 :::
 
