@@ -1220,10 +1220,11 @@ function sandboxPolicyList(sandboxName) {
   console.log("");
 }
 
-function cleanupSandboxServices(sandboxName) {
-  // Stop host services (cloudflared) and clean up PID directory.
-  const { stopAll } = require("./lib/services");
-  stopAll({ sandboxName });
+function cleanupSandboxServices(sandboxName, { stopHostServices = false } = {}) {
+  if (stopHostServices) {
+    const { stopAll } = require("./lib/services");
+    stopAll({ sandboxName });
+  }
   try {
     fs.rmSync(`/tmp/nemoclaw-services-${sandboxName}`, { recursive: true, force: true });
   } catch {
@@ -1254,8 +1255,6 @@ async function sandboxDestroy(sandboxName, args = []) {
   if (sb && sb.nimContainer) nim.stopNimContainerByName(sb.nimContainer);
   else nim.stopNimContainer(sandboxName);
 
-  cleanupSandboxServices(sandboxName);
-
   console.log(`  Deleting sandbox '${sandboxName}'...`);
   const deleteResult = runOpenshell(["sandbox", "delete", sandboxName], {
     ignoreError: true,
@@ -1270,6 +1269,13 @@ async function sandboxDestroy(sandboxName, args = []) {
     console.error(`  Failed to destroy sandbox '${sandboxName}'.`);
     process.exit(deleteResult.status || 1);
   }
+
+  const shouldStopHostServices =
+    (deleteResult.status === 0 || alreadyGone) &&
+    registry.listSandboxes().sandboxes.length === 1 &&
+    !!registry.getSandbox(sandboxName);
+
+  cleanupSandboxServices(sandboxName, { stopHostServices: shouldStopHostServices });
 
   const removed = registry.removeSandbox(sandboxName);
   const session = onboardSession.loadSession();
