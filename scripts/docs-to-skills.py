@@ -11,7 +11,7 @@ Usage:
 Make sure to run this script using the following command to generate the skills and keep the locations and names consistent.
 
 ```bash
-python3 scripts/docs-to-skills.py docs/ .agents/skills/ --prefix nemoclaw
+python3 scripts/docs-to-skills.py docs/ .agents/skills/ --prefix nemoclaw-user
 ```
 
 What it does:
@@ -34,17 +34,17 @@ What it does:
 
 Naming:
   Use --prefix to keep skill names consistent across the project. The prefix
-  is prepended to every generated skill name (e.g. --prefix nemoclaw produces
-  nemoclaw-get-started, nemoclaw-manage-policy). Action verbs are derived
+  is prepended to every generated skill name (e.g. --prefix nemoclaw-user produces
+  nemoclaw-user-get-started, nemoclaw-user-manage-policy). Action verbs are derived
   automatically from page titles and content types. Use --name-map to
   override specific names when the heuristic doesn't produce the right result.
 
 Usage:
-    python3 scripts/docs-to-skills.py docs/ .agents/skills/ --prefix nemoclaw
-    python3 scripts/docs-to-skills.py docs/ .agents/skills/ --prefix nemoclaw --dry-run
-    python3 scripts/docs-to-skills.py docs/ .agents/skills/ --strategy individual --prefix nemoclaw
-    python3 scripts/docs-to-skills.py docs/ .agents/skills/ --prefix nemoclaw --name-map about=overview
-    python3 scripts/docs-to-skills.py docs/ .agents/skills/ --prefix nemoclaw --exclude "release-notes.md"
+    python3 scripts/docs-to-skills.py docs/ .agents/skills/ --prefix nemoclaw-user
+    python3 scripts/docs-to-skills.py docs/ .agents/skills/ --prefix nemoclaw-user --dry-run
+    python3 scripts/docs-to-skills.py docs/ .agents/skills/ --strategy individual --prefix nemoclaw-user
+    python3 scripts/docs-to-skills.py docs/ .agents/skills/ --prefix nemoclaw-user --name-map about=overview
+    python3 scripts/docs-to-skills.py docs/ .agents/skills/ --prefix nemoclaw-user --exclude "release-notes.md"
 """
 
 from __future__ import annotations
@@ -877,6 +877,17 @@ CONTENT_TYPE_ROLE = {
 }
 
 
+def markdown_spdx_header() -> str:
+    """Return the SPDX header for generated Markdown files."""
+    return "\n".join(
+        [
+            "<!-- SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved. -->",
+            "<!-- SPDX-License-Identifier: Apache-2.0 -->",
+            "",
+        ]
+    )
+
+
 def generate_skill(
     name: str,
     pages: list[DocPage],
@@ -922,6 +933,8 @@ def generate_skill(
     lines.append(f"name: {yaml_scalar(name)}")
     lines.append(f"description: {yaml_scalar(description)}")
     lines.append("---")
+    lines.append("")
+    lines.append(markdown_spdx_header().rstrip("\n"))
     lines.append("")
 
     # Title
@@ -1081,12 +1094,15 @@ def generate_skill(
             skill_md.rstrip("\n") + "\n", encoding="utf-8"
         )
 
+        spdx_ref = markdown_spdx_header()
+
+
         if ref_files:
             refs_dir = skill_dir / "references"
             refs_dir.mkdir(exist_ok=True)
             for fname, content in ref_files.items():
                 (refs_dir / fname).write_text(
-                    content.rstrip("\n") + "\n", encoding="utf-8"
+                    spdx_ref + content.rstrip("\n") + "\n", encoding="utf-8"
                 )
 
     return summary
@@ -1194,10 +1210,10 @@ def main():
               smart       Group by directory, merge concept pages as context
 
             Examples:
-              %(prog)s docs/ .agents/skills/ --prefix nemoclaw
-              %(prog)s docs/ .agents/skills/ --strategy individual --prefix nemoclaw
-              %(prog)s docs/ .agents/skills/ --prefix nemoclaw --name-map about=overview
-              %(prog)s docs/ .agents/skills/ --prefix nemoclaw --dry-run
+              %(prog)s docs/ .agents/skills/ --prefix nemoclaw-user
+              %(prog)s docs/ .agents/skills/ --strategy individual --prefix nemoclaw-user
+              %(prog)s docs/ .agents/skills/ --prefix nemoclaw-user --name-map about=overview
+              %(prog)s docs/ .agents/skills/ --prefix nemoclaw-user --dry-run
         """),
     )
     parser.add_argument(
