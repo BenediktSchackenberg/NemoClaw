@@ -156,8 +156,8 @@ first_non_loopback_nameserver() {
     return 1
   fi
 
-  printf '%s\n' "$resolv_conf" \
-    | awk '$1 == "nameserver" && $2 !~ /^127\./ { print $2; exit }'
+  printf '%s\n' "$resolv_conf" |
+    awk '$1 == "nameserver" && $2 !~ /^127\./ { print $2; exit }'
 }
 
 get_colima_vm_nameserver() {
@@ -290,12 +290,12 @@ check_local_provider_health() {
 detect_kubelet_conflict() {
   KUBELET_CONFLICT_DETAIL=""
 
-  if pgrep -x kubelet > /dev/null 2>&1 || pgrep -x kubelite > /dev/null 2>&1 || pgrep -x k3s > /dev/null 2>&1; then
+  if pgrep -x kubelet >/dev/null 2>&1 || pgrep -x kubelite >/dev/null 2>&1 || pgrep -x k3s >/dev/null 2>&1; then
     KUBELET_CONFLICT_DETAIL="kubelet process detected"
     return 0
   fi
 
-  if command -v microk8s > /dev/null 2>&1; then
+  if command -v microk8s >/dev/null 2>&1; then
     if microk8s status 2>/dev/null | grep -q "microk8s is running"; then
       KUBELET_CONFLICT_DETAIL="MicroK8s is running"
       return 0
