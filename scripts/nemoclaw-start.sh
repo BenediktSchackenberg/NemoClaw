@@ -2217,6 +2217,57 @@ if [ "$(id -u)" -ne 0 ]; then
   # The Docker build (Dockerfile) sets this up correctly, but the native curl
   # installer may create these directories as root, causing EACCES when openclaw
   # tries to write device-auth.json or other state files.  Ref: #692
+  # Ensure the identity symlink points from .openclaw/identity → .openclaw-data/identity.
+  # Uses early returns to keep each case flat.
+  ensure_identity_symlink() {
+    local data_dir="$1" openclaw_dir="$2"
+    local link_path="${openclaw_dir}/identity"
+    local target="${data_dir}/identity"
+    [ -d "$target" ] || return 0
+    mkdir -p "${openclaw_dir}" 2>/dev/null || true
+
+    # Already a correct symlink — nothing to do.
+    if [ -L "$link_path" ]; then
+      local current expected
+      current="$(readlink -f "$link_path" 2>/dev/null || true)"
+      expected="$(readlink -f "$target" 2>/dev/null || true)"
+      [ "$current" != "$expected" ] || return 0
+      ln -snf "$target" "$link_path" 2>/dev/null &&
+        echo "[setup] repaired identity symlink" >&2 ||
+        echo "[setup] could not repair identity symlink" >&2
+      return 0
+    fi
+
+    # Nothing exists yet — create the symlink.
+    if [ ! -e "$link_path" ]; then
+      ln -snf "$target" "$link_path" 2>/dev/null &&
+        echo "[setup] created identity symlink" >&2 ||
+        echo "[setup] could not create identity symlink" >&2
+      return 0
+    fi
+
+    # A non-symlink entry exists — back it up, then replace.
+    local backup
+    backup="${link_path}.bak.$(date +%s)"
+    if mv "$link_path" "$backup" 2>/dev/null &&
+      ln -snf "$target" "$link_path" 2>/dev/null; then
+      echo "[setup] replaced non-symlink identity path (backup: ${backup})" >&2
+    else
+      echo "[setup] could not replace ${link_path}; writes may fail" >&2
+    fi
+  }
+
+  fix_openclaw_data_ownership() {
+    local data_dir="${HOME}/.openclaw-data"
+    [ -d "$data_dir" ] || return 0
+    if find "$data_dir" ! -uid "$(id -u)" -print -quit 2>/dev/null | grep -q .; then
+      chown -R "$(id -u):$(id -g)" "$data_dir" 2>/dev/null &&
+        echo "[setup] fixed ownership on ${data_dir}" >&2 ||
+        echo "[setup] could not fix ownership on ${data_dir}; writes may fail" >&2
+    fi
+    ensure_identity_symlink "$data_dir" "${HOME}/.openclaw"
+  }
+
   fix_openclaw_ownership() {
     local openclaw_dir="${HOME}/.openclaw"
     [ -d "$openclaw_dir" ] || return 0
@@ -2232,6 +2283,7 @@ if [ "$(id -u)" -ne 0 ]; then
     chmod 700 "$openclaw_dir" 2>/dev/null || true
     chmod 600 "$openclaw_dir/openclaw.json" "$openclaw_dir/.config-hash" 2>/dev/null || true
   }
+  fix_openclaw_data_ownership
   fix_openclaw_ownership
   write_auth_profile
   harden_auth_profiles
