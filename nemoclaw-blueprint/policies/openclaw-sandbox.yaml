@@ -54,23 +54,13 @@ filesystem_policy:
 landlock:
   compatibility: best_effort
 
-# Prevent agents from tampering with their own config or killing the gateway.
-# This is defense-in-depth on top of the filesystem permission lock from #514.
-tool_policy:
-  deny:
-    - tool: write
-      paths:
-        - "**/.openclaw/openclaw.json"
-        - "/etc/openclaw/openclaw.json"
-        - "/tmp/openclaw/openclaw.json"
-    - tool: edit
-      paths:
-        - "**/.openclaw/openclaw.json"
-        - "/etc/openclaw/openclaw.json"
-        - "/tmp/openclaw/openclaw.json"
-    # NOTE: exec command restrictions are handled at the OpenShell/sandbox level
-    # via security=allowlist mode, not through tool_policy (which only gates tool
-    # names, not individual commands).
+# Note: tool-level write/edit restrictions for openclaw.json are intentionally
+# NOT declared here. OpenShell's PolicyFile schema does not support a
+# `tool_policy` section (serde deny_unknown_fields — only version, filesystem_policy,
+# landlock, process, network_policies are accepted). Config protection is
+# achieved entirely through filesystem_policy (read_only + /etc/openclaw mount)
+# and the root:root 555 permission lock on /sandbox/.openclaw/.
+# Ref: https://github.com/NVIDIA/NemoClaw/pull/654#pullrequestreview-…
 
 process:
   run_as_user: sandbox
