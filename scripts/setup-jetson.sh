@@ -96,6 +96,7 @@ try:
         json.dump(cfg, f, indent=4)
         f.write('\n')
     os.replace(tmp, path)
+    os.chmod(path, orig_mode)
 except Exception:
     os.unlink(tmp)
     raise
