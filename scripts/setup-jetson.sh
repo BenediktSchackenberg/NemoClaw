@@ -54,6 +54,8 @@ configure_jetson_host() {
       # The previous sed approach stripped the trailing comma from
       # "default-runtime": "nvidia", which produced malformed JSON when
       # "runtimes" was the next key. See: https://github.com/NVIDIA/NemoClaw/issues/1875
+      "${SUDO[@]}" python3 --version >/dev/null 2>&1 ||
+        error "python3 is required to patch /etc/docker/daemon.json but was not found on PATH"
       "${SUDO[@]}" python3 - /etc/docker/daemon.json <<'PYEOF'
 import json, os, re, sys, tempfile
 path = sys.argv[1]
@@ -79,6 +81,8 @@ except json.JSONDecodeError:
         cfg = json.loads(repaired)
     except json.JSONDecodeError as e:
         sys.exit(f'daemon.json is malformed and could not be repaired automatically: {e}')
+if not isinstance(cfg, dict):
+    sys.exit('daemon.json must contain a top-level JSON object')
 cfg.pop('iptables', None)
 cfg.pop('bridge', None)
 # Write atomically: dump to a temp file in the same directory, then replace.
