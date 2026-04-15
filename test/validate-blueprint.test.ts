@@ -374,6 +374,11 @@ describe("weather preset", () => {
     expect(hosts).toContain("api.open-meteo.com");
   });
 
+  it("regression #1417: weather preset covers geocoding-api.open-meteo.com", () => {
+    const hosts = weatherEndpoints().map((ep) => ep.host);
+    expect(hosts).toContain("geocoding-api.open-meteo.com");
+  });
+
   it("regression #1417: weather endpoints allow GET requests", () => {
     for (const ep of weatherEndpoints()) {
       const rules = Array.isArray(ep.rules) ? ep.rules : [];

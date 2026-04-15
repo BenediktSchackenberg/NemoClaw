@@ -84,7 +84,9 @@ The baseline policy is always applied regardless of the selected tier.
 | Balanced (default) | npm, pypi, huggingface, brew, brave | Full dev tooling and web search. No messaging platform access. |
 | Open | npm, pypi, huggingface, brew, brave, slack, discord, telegram, jira, outlook | Broad access across third-party services including messaging and productivity. |
 
-> **Note:** The `weather` preset (`wttr.in`, `api.open-meteo.com`, `geocoding-api.open-meteo.com`) is not included in any default tier because most agent workflows do not require it. Apply it manually if you use the built-in weather skill: `nemoclaw <sandbox> policy-add weather`. See [#1417](https://github.com/NVIDIA/NemoClaw/issues/1417).
+> **Note:** The `weather` preset is not included in any default tier — most agent workflows do not need it.
+> To use the built-in weather skill, apply it explicitly after onboarding:
+> `nemoclaw <sandbox> policy-add weather`.
 
 After selecting a tier, a combined preset and access-mode screen lets you include or exclude individual presets and toggle each between read (GET only) and read-write (GET + POST/PUT/PATCH) access.
 Tier-default presets are pre-selected; additional presets can be added from the full list.
