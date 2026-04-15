@@ -55,18 +55,43 @@ configure_jetson_host() {
       # "default-runtime": "nvidia", which produced malformed JSON when
       # "runtimes" was the next key. See: https://github.com/NVIDIA/NemoClaw/issues/1875
       "${SUDO[@]}" python3 - /etc/docker/daemon.json <<'PYEOF'
-import json, sys
+import json, os, re, sys, tempfile
 path = sys.argv[1]
 try:
     with open(path) as f:
         cfg = json.load(f)
-except (FileNotFoundError, json.JSONDecodeError):
+except FileNotFoundError:
     cfg = {}
+except json.JSONDecodeError:
+    # Attempt to repair the known missing-comma pattern introduced by the
+    # previous sed-based approach before re-parsing. If repair fails, abort
+    # rather than silently overwriting the file with an empty object.
+    with open(path) as f:
+        raw = f.read()
+    # Insert missing comma after "default-runtime": "nvidia" when followed
+    # by whitespace + a quoted key (next JSON member without comma separator).
+    repaired = re.sub(
+        r'("default-runtime"\s*:\s*"nvidia")([\s\n]+")',
+        r'\1,\2',
+        raw,
+    )
+    try:
+        cfg = json.loads(repaired)
+    except json.JSONDecodeError as e:
+        sys.exit(f'daemon.json is malformed and could not be repaired automatically: {e}')
 cfg.pop('iptables', None)
 cfg.pop('bridge', None)
-with open(path, 'w') as f:
-    json.dump(cfg, f, indent=4)
-f.write('\n')
+# Write atomically: dump to a temp file in the same directory, then replace.
+dirname = os.path.dirname(os.path.abspath(path))
+fd, tmp = tempfile.mkstemp(dir=dirname)
+try:
+    with os.fdopen(fd, 'w') as f:
+        json.dump(cfg, f, indent=4)
+        f.write('\n')
+    os.replace(tmp, path)
+except Exception:
+    os.unlink(tmp)
+    raise
 PYEOF
       ;;
     jp7)
