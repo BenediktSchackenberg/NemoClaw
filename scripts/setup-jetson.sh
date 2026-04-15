@@ -50,7 +50,24 @@ configure_jetson_host() {
   case "$jetpack_version" in
     jp6)
       "${SUDO[@]}" update-alternatives --set iptables /usr/sbin/iptables-legacy
-      "${SUDO[@]}" sed -i '/"iptables": false,/d; /"bridge": "none"/d; s/"default-runtime": "nvidia",/"default-runtime": "nvidia"/' /etc/docker/daemon.json
+      # Patch /etc/docker/daemon.json using Python to avoid generating invalid JSON.
+      # The previous sed approach stripped the trailing comma from
+      # "default-runtime": "nvidia", which produced malformed JSON when
+      # "runtimes" was the next key. See: https://github.com/NVIDIA/NemoClaw/issues/1875
+      "${SUDO[@]}" python3 - /etc/docker/daemon.json <<'PYEOF'
+import json, sys
+path = sys.argv[1]
+try:
+    with open(path) as f:
+        cfg = json.load(f)
+except (FileNotFoundError, json.JSONDecodeError):
+    cfg = {}
+cfg.pop('iptables', None)
+cfg.pop('bridge', None)
+with open(path, 'w') as f:
+    json.dump(cfg, f, indent=4)
+f.write('\n')
+PYEOF
       ;;
     jp7)
       # JP7 (Thor) does not need iptables or Docker daemon.json changes.
