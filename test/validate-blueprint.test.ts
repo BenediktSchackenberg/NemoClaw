@@ -341,3 +341,46 @@ describe("huggingface preset", () => {
     }
   });
 });
+
+describe("weather preset", () => {
+  // The weather skill requires wttr.in and Open-Meteo to be reachable.
+  // Regression test to ensure the preset file exists and covers the required hosts.
+  // See: https://github.com/NVIDIA/NemoClaw/issues/1417
+  const WEATHER_PRESET_PATH = new URL(
+    "../nemoclaw-blueprint/policies/presets/weather.yaml",
+    import.meta.url,
+  );
+
+  const weatherPreset = YAML.parse(
+    readFileSync(WEATHER_PRESET_PATH, "utf-8"),
+  ) as Record<string, unknown>;
+
+  type Endpoint = { host?: string; rules?: Array<{ allow?: { method?: string } }> };
+
+  function weatherEndpoints(): Endpoint[] {
+    const np = weatherPreset.network_policies as Record<string, unknown> | undefined;
+    if (!np) return [];
+    const w = np.weather as { endpoints?: unknown } | undefined;
+    return Array.isArray(w?.endpoints) ? (w!.endpoints as Endpoint[]) : [];
+  }
+
+  it("regression #1417: weather preset covers wttr.in", () => {
+    const hosts = weatherEndpoints().map((ep) => ep.host);
+    expect(hosts).toContain("wttr.in");
+  });
+
+  it("regression #1417: weather preset covers api.open-meteo.com", () => {
+    const hosts = weatherEndpoints().map((ep) => ep.host);
+    expect(hosts).toContain("api.open-meteo.com");
+  });
+
+  it("regression #1417: weather endpoints allow GET requests", () => {
+    for (const ep of weatherEndpoints()) {
+      const rules = Array.isArray(ep.rules) ? ep.rules : [];
+      const hasGet = rules.some(
+        (r) => r?.allow?.method?.toUpperCase() === "GET",
+      );
+      expect(hasGet).toBe(true);
+    }
+  });
+});
