@@ -82,9 +82,16 @@ except json.JSONDecodeError:
 cfg.pop('iptables', None)
 cfg.pop('bridge', None)
 # Write atomically: dump to a temp file in the same directory, then replace.
+# Copy permissions from the original file (or use 0644 if missing) so the
+# replaced file is world-readable, matching the typical daemon.json mode.
 dirname = os.path.dirname(os.path.abspath(path))
+try:
+    orig_mode = os.stat(path).st_mode & 0o777
+except FileNotFoundError:
+    orig_mode = 0o644
 fd, tmp = tempfile.mkstemp(dir=dirname)
 try:
+    os.chmod(tmp, orig_mode)
     with os.fdopen(fd, 'w') as f:
         json.dump(cfg, f, indent=4)
         f.write('\n')
