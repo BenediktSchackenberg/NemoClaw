@@ -107,7 +107,8 @@ The baseline policy is always applied regardless of the selected tier.
 | Open | npm, pypi, huggingface, brew, brave, slack, discord, telegram, jira, outlook | Broad access across third-party services including messaging and productivity. |
 
 :::{note}
-The `weather` preset is not included in any default tier — most agent workflows do not need it.
+The `weather` preset is not included in any default tier.
+Most agent workflows do not need it.
 To use the built-in weather skill, apply it explicitly after onboarding:
 `nemoclaw <sandbox> policy-add weather`.
 :::
