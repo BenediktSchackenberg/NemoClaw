@@ -269,6 +269,7 @@ function repairRecordedSandbox(sandboxName) {
 
 const { streamSandboxCreate } = sandboxCreateStream;
 
+/** Spawn `openshell gateway start` and stream its output with progress heartbeats. */
 function streamGatewayStart(command, env = process.env) {
   const child = spawn("bash", ["-lc", command], {
     cwd: ROOT,
@@ -381,15 +382,35 @@ function streamGatewayStart(command, env = process.env) {
   }, 5000);
   heartbeatTimer.unref?.();
 
+  // Hard timeout to prevent indefinite hangs if the openshell process
+  // never exits (e.g. Docker daemon unresponsive, k3s restart loop). (#1830)
+  // On timeout, send SIGTERM and let the `close` event resolve the promise
+  // so the child has actually exited before the caller proceeds to retry.
+  const GATEWAY_START_TIMEOUT = envInt("NEMOCLAW_GATEWAY_START_TIMEOUT", 600) * 1000;
+  let killedByTimeout = false;
+  const killTimer = setTimeout(() => {
+    killedByTimeout = true;
+    lines.push("[NemoClaw] Gateway start timed out — killing process.");
+    child.kill("SIGTERM");
+    // If SIGTERM is ignored, force-kill after 10s.
+    setTimeout(() => {
+      if (!settled) child.kill("SIGKILL");
+    }, 10_000).unref?.();
+  }, GATEWAY_START_TIMEOUT);
+  killTimer.unref?.();
+
   return new Promise((resolve) => {
     resolvePromise = resolve;
     child.on("error", (error) => {
+      clearTimeout(killTimer);
       const detail = error?.message || String(error);
       lines.push(detail);
       finish({ status: 1, output: lines.join("\n") });
     });
     child.on("close", (code) => {
-      finish({ status: code ?? 1, output: lines.join("\n") });
+      clearTimeout(killTimer);
+      const exitCode = killedByTimeout ? 1 : (code ?? 1);
+      finish({ status: exitCode, output: lines.join("\n") });
     });
   });
 }
@@ -1271,7 +1292,7 @@ function probeResponsesToolCalling(endpointUrl, model, apiKey, options = {}) {
     ? ["-H", `Authorization: Bearer ${normalizedKey}`]
     : [];
   const url = useQueryParam && normalizedKey
-    ? `${baseUrl}/responses?key=${normalizedKey}`
+    ? `${baseUrl}/responses?key=${encodeURIComponent(normalizedKey)}`
     : `${baseUrl}/responses`;
   const result = runCurlProbe([
     "-sS",
@@ -1327,7 +1348,7 @@ function probeOpenAiLikeEndpoint(endpointUrl, model, apiKey, options = {}) {
     ? ["-H", `Authorization: Bearer ${normalizedKey}`]
     : [];
   const appendKey = (path) =>
-    useQueryParam && normalizedKey ? `${baseUrl}${path}?key=${normalizedKey}` : `${baseUrl}${path}`;
+    useQueryParam && normalizedKey ? `${baseUrl}${path}?key=${encodeURIComponent(normalizedKey)}` : `${baseUrl}${path}`;
 
   const responsesProbe =
     options.requireResponsesToolCalling === true
@@ -2512,6 +2533,7 @@ async function preflight() {
 
 // ── Step 2: Gateway ──────────────────────────────────────────────
 
+/** Start the OpenShell gateway with retry logic and post-start health polling. */
 async function startGatewayWithOptions(_gpu, { exitOnFailure = true } = {}) {
   step(2, 8, "Starting OpenShell gateway");
 
@@ -2595,8 +2617,11 @@ async function startGatewayWithOptions(_gpu, { exitOnFailure = true } = {}) {
 
         // ARM64 (e.g. Raspberry Pi) needs more time: k3s takes 90-180s to init
         const isArm64 = process.arch === "arm64";
-        const healthPollCount = envInt("NEMOCLAW_HEALTH_POLL_COUNT", isArm64 ? 30 : 5);
-        const healthPollInterval = envInt("NEMOCLAW_HEALTH_POLL_INTERVAL", isArm64 ? 10 : 2);
+        // After openshell gateway start returns (container HEALTHY at Layer 1),
+        // poll application-layer connectivity (Layer 2: gRPC, TLS, port mapping).
+        // 60s default gives enough buffer for gRPC init and TLS handshake. (#1830)
+        const healthPollCount = envInt("NEMOCLAW_HEALTH_POLL_COUNT", isArm64 ? 30 : 12);
+        const healthPollInterval = envInt("NEMOCLAW_HEALTH_POLL_INTERVAL", isArm64 ? 10 : 5);
         for (let i = 0; i < healthPollCount; i++) {
           // Ensure the gateway is selected before each probe (non-TTY environments
           // like ARM64 may not have it selected automatically)
