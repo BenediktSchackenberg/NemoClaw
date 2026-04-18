@@ -128,3 +128,28 @@ describe("config set helpers", () => {
     });
   });
 });
+
+describe("OPENCLAW_TOP_LEVEL_KEYS", () => {
+  const { OPENCLAW_TOP_LEVEL_KEYS } = require("../dist/lib/sandbox-config");
+
+  it("contains required OpenClaw sections", () => {
+    expect(OPENCLAW_TOP_LEVEL_KEYS.has("agents")).toBe(true);
+    expect(OPENCLAW_TOP_LEVEL_KEYS.has("channels")).toBe(true);
+    expect(OPENCLAW_TOP_LEVEL_KEYS.has("tools")).toBe(true);
+    expect(OPENCLAW_TOP_LEVEL_KEYS.has("memory")).toBe(true);
+    expect(OPENCLAW_TOP_LEVEL_KEYS.has("mcpServers")).toBe(true);
+  });
+
+  it("does not contain known-invalid keys (regression #2019)", () => {
+    // These are the keys that triggered the bug report — writing them
+    // causes OpenClaw to fail startup with 'Unrecognized key'.
+    expect(OPENCLAW_TOP_LEVEL_KEYS.has("inference")).toBe(false);
+    expect(OPENCLAW_TOP_LEVEL_KEYS.has("endpoint")).toBe(false);
+    expect(OPENCLAW_TOP_LEVEL_KEYS.has("model")).toBe(false);
+    expect(OPENCLAW_TOP_LEVEL_KEYS.has("provider")).toBe(false);
+  });
+
+  it("does not contain the protected gateway section", () => {
+    expect(OPENCLAW_TOP_LEVEL_KEYS.has("gateway")).toBe(false);
+  });
+});

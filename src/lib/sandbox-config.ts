@@ -260,6 +260,27 @@ interface ConfigSetOpts {
   restart?: boolean;
 }
 
+// Known top-level sections in OpenClaw's config schema (openclaw.json).
+// Any key outside these sections will be rejected by OpenClaw with
+// "Unrecognized key" at startup, corrupting the agent's config.
+const OPENCLAW_TOP_LEVEL_KEYS = new Set([
+  "agents",      // agent defaults (model, workspace, compaction, …)
+  "models",      // provider and model catalogue
+  "channels",    // messaging channel integrations (telegram, slack, discord, …)
+  "tools",       // tool policy (exec security, browser, …)
+  "memory",      // memory backend configuration
+  "mcpServers",  // MCP server definitions
+  "extensions",  // extension / plugin configuration
+  "plugins",     // alias for extensions in some OpenClaw versions
+  "keyPath",     // SSH key path for remote execution
+  "reporting",   // reporting / analytics
+  "hooks",       // lifecycle hook scripts
+  "meta",        // metadata written by OpenClaw itself
+  "wizard",      // onboarding wizard state
+  "auth",        // auth profile configuration
+  "logging",     // log level and output configuration
+]);
+
 function configSet(sandboxName: string, opts: ConfigSetOpts = {}): void {
   validateName(sandboxName, "sandbox name");
 
@@ -305,6 +326,18 @@ function configSet(sandboxName: string, opts: ConfigSetOpts = {}): void {
   if (opts.key.startsWith("gateway.") || opts.key === "gateway") {
     console.error("  Cannot modify the gateway section directly.");
     console.error("  Use `nemoclaw config rotate-token` for credential changes.");
+    process.exit(1);
+  }
+
+  // 4b. Validate the key path against known OpenClaw config sections.
+  // Any dotpath that doesn't start with a recognized top-level section will
+  // produce an "Unrecognized key" error in OpenClaw at startup.
+  const topLevelKey = opts.key.split(".")[0];
+  if (!OPENCLAW_TOP_LEVEL_KEYS.has(topLevelKey)) {
+    console.error(`  Key validation failed: "${opts.key}" is not a recognized OpenClaw config path.`);
+    console.error(`  The top-level section "${topLevelKey}" is not known to OpenClaw.`);
+    console.error("  Writing an unrecognized key will corrupt the config and prevent the agent from starting.");
+    console.error(`  Recognized top-level sections: ${[...OPENCLAW_TOP_LEVEL_KEYS].sort().join(", ")}`);
     process.exit(1);
   }
 
@@ -524,4 +557,5 @@ export {
   setDotpath,
   validateUrlValue,
   readStdin,
+  OPENCLAW_TOP_LEVEL_KEYS,
 };
