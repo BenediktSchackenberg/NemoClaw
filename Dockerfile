@@ -328,11 +328,13 @@ RUN mkdir -p /sandbox/.openclaw-data/logs \
         /sandbox/.openclaw-data/credentials \
         /sandbox/.openclaw-data/sandbox \
         /sandbox/.openclaw-data/media \
+        /sandbox/.openclaw-data/extensions \
     && chown sandbox:sandbox /sandbox/.openclaw-data/logs \
         /sandbox/.openclaw-data/credentials \
         /sandbox/.openclaw-data/sandbox \
         /sandbox/.openclaw-data/media \
-    && for dir in logs credentials sandbox media; do \
+        /sandbox/.openclaw-data/extensions \
+    && for dir in logs credentials sandbox media extensions; do \
         if [ -L "/sandbox/.openclaw/$dir" ]; then true; \
         elif [ -e "/sandbox/.openclaw/$dir" ]; then \
             cp -a "/sandbox/.openclaw/$dir/." "/sandbox/.openclaw-data/$dir/" 2>/dev/null || true; \
