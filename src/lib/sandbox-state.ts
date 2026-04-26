@@ -294,10 +294,15 @@ function auditExtractedSymlinks(dirPath: string, allowedRoots: string[]): string
           // symlinks pointing to arbitrary absolute paths (e.g. /etc/passwd)
           // are still rejected. Fixes #2317.
           const SANDBOX_DATA_PREFIXES = ["/sandbox/.openclaw-data/", "/sandbox/.hermes-data/"];
+          // Normalize the target first to collapse any .. traversal segments
+          // (e.g. /sandbox/.openclaw-data/../../etc/passwd → /etc/passwd).
+          // Only then check the prefix — this prevents a traversal bypass
+          // where a crafted target starts with an allowed prefix but escapes it.
+          const normalizedTarget = path.posix.normalize(linkTarget);
           const resolvedInArchive =
-            path.isAbsolute(linkTarget) &&
-            SANDBOX_DATA_PREFIXES.some((p) => linkTarget.startsWith(p))
-              ? path.resolve(dirPath, linkTarget.replace(/^\//, ""))
+            path.isAbsolute(normalizedTarget) &&
+            SANDBOX_DATA_PREFIXES.some((p) => normalizedTarget.startsWith(p))
+              ? path.resolve(dirPath, normalizedTarget.replace(/^\//, ""))
               : null;
 
           const inAnyAllowedRoot =

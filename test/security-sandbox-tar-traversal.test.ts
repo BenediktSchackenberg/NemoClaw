@@ -437,6 +437,30 @@ describe("Fix: safeTarExtract blocks malicious archives and extracts safe ones",
       fs.rmSync(workDir, { recursive: true, force: true });
     }
   });
+
+  it("regression #2317: blocks path traversal within allowed prefix (/sandbox/.openclaw-data/../../etc/passwd)", async () => {
+    const { safeTarExtract } = await loadSandboxState();
+    const workDir = fs.mkdtempSync(path.join(os.tmpdir(), "nemoclaw-2317-traversal-"));
+    try {
+      const targetDir = path.join(workDir, "backup");
+      fs.mkdirSync(targetDir, { recursive: true });
+
+      // Crafted target starts with allowed prefix but traverses out of it
+      const tar = buildTar([
+        {
+          path: "evil-traversal",
+          type: "2",
+          linkTarget: "/sandbox/.openclaw-data/../../etc/passwd",
+        },
+      ]);
+
+      const result = safeTarExtract(tar, targetDir);
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("symlink");
+    } finally {
+      fs.rmSync(workDir, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("Fix: rejectHardLinks blocks hard-link entries at validation time", () => {
