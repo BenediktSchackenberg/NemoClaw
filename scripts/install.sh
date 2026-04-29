@@ -1486,7 +1486,8 @@ run_installer_host_preflight() {
 }
 
 run_onboard() {
-  show_usage_notice
+  # NOTE(#2671): usage notice is shown once earlier between Phase 1 runtime
+  # setup and Phase 2 CLI install. Keep onboarding free of duplicate prompt.
   info "Running ${_CLI_BIN} onboard…"
   local -a onboard_cmd=(onboard)
   local session_file="${HOME}/.nemoclaw/onboard-session.json"
@@ -1664,6 +1665,10 @@ main() {
   step 1 "Node.js"
   install_nodejs
   ensure_supported_runtime
+
+  # Show usage notice after Phase 1 runtime setup but before Phase 2 CLI
+  # install, so rejection paths don't leave a partially-installed CLI on PATH.
+  show_usage_notice
 
   step 2 "${_CLI_DISPLAY} CLI"
   # Local inference setup is opt-in via NEMOCLAW_PROVIDER. Both functions
