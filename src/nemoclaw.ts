@@ -3839,6 +3839,17 @@ async function sandboxSnapshot(sandboxName: string, subArgs: string[]) {
         parsed.targetSandbox === sandboxName
           ? sandboxName
           : validateName(parsed.targetSandbox, "target sandbox name");
+
+      // `openshell sandbox list` can return cached metadata even when the
+      // gateway container is stopped. Probe the named gateway lifecycle first
+      // so restore never proceeds on a dead/unreachable gateway. (#2673)
+      const gatewayLifecycle = getNamedGatewayLifecycleState();
+      if (gatewayLifecycle.state !== "healthy_named") {
+        console.error("  NemoClaw gateway is not reachable. Cannot restore snapshot.");
+        console.error("  Start it with 'openshell gateway start --name nemoclaw' or run 'nemoclaw onboard'.");
+        process.exit(1);
+      }
+
       const isLive = captureOpenshell(["sandbox", "list"], { ignoreError: true });
       if (isLive.status !== 0) {
         console.error("  Failed to query live sandbox state from OpenShell.");
