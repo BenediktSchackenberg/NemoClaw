@@ -3845,8 +3845,19 @@ async function sandboxSnapshot(sandboxName: string, subArgs: string[]) {
       // so restore never proceeds on a dead/unreachable gateway. (#2673)
       const gatewayLifecycle = getNamedGatewayLifecycleState();
       if (gatewayLifecycle.state !== "healthy_named") {
-        console.error("  NemoClaw gateway is not reachable. Cannot restore snapshot.");
-        console.error("  Start it with 'openshell gateway start --name nemoclaw' or run 'nemoclaw onboard'.");
+        if (gatewayLifecycle.state === "connected_other") {
+          printWrongGatewayActiveGuidance(
+            sandboxName,
+            gatewayLifecycle.activeGateway,
+            console.error,
+          );
+        } else {
+          console.error(
+            `  Cannot restore snapshot: the nemoclaw gateway is not running (state: ${gatewayLifecycle.state}).`,
+          );
+          console.error(`  Start it with: openshell gateway start nemoclaw`);
+          printGatewayLifecycleHint(gatewayLifecycle.status || "", sandboxName, console.error);
+        }
         process.exit(1);
       }
 
