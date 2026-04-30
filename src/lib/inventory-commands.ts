@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import type { GatewayInference } from "./inference-config";
+import { CLI_NAME } from "./branding";
 
 export interface SandboxEntry {
   name: string;
@@ -11,6 +12,7 @@ export interface SandboxEntry {
   policies?: string[] | null;
   messagingChannels?: string[] | null;
   agent?: string | null;
+  dashboardPort?: number | null;
 }
 
 export interface MessagingBridgeHealth {
@@ -76,10 +78,10 @@ export async function listSandboxesCommand(deps: ListSandboxesCommandDeps): Prom
         `  No sandboxes registered locally, but the last onboarded sandbox was '${session.sandboxName}'.`,
       );
       log(
-        "  Retry `nemoclaw <name> connect` or `nemoclaw <name> status` once the gateway/runtime is healthy.",
+        `  Retry \`${CLI_NAME} <name> connect\` or \`${CLI_NAME} <name> status\` once the gateway/runtime is healthy.`,
       );
     } else {
-      log("  No sandboxes registered. Run `nemoclaw onboard` to get started.");
+      log(`  No sandboxes registered. Run \`${CLI_NAME} onboard\` to get started.`);
     }
     log("");
     return;
@@ -123,6 +125,9 @@ export async function listSandboxesCommand(deps: ListSandboxesCommandDeps): Prom
       if (providerDrifted) parts.push(`provider=${sb.provider || "unknown"}`);
       log(`      (onboarded: ${parts.join(", ")})`);
     }
+    if (sb.dashboardPort != null) {
+      log(`      dashboard: http://127.0.0.1:${sb.dashboardPort}/`);
+    }
   }
   log("");
   log("  * = default sandbox");
@@ -151,7 +156,8 @@ export function showStatusCommand(deps: ShowStatusCommandDeps): void {
       // agrees with `openshell inference get` (#2369).
       const liveModel = isDefault && live ? live.model : null;
       const model = liveModel || sb.model;
-      log(`    ${sb.name}${def}${model ? ` (${model})` : ""}`);
+      const portSuffix = sb.dashboardPort != null ? ` :${sb.dashboardPort}` : "";
+      log(`    ${sb.name}${def}${model ? ` (${model})` : ""}${portSuffix}`);
       if (isDefault && liveModel && liveModel !== sb.model) {
         log(`      (onboarded: ${sb.model || "unknown"})`);
       }
@@ -171,7 +177,7 @@ export function showStatusCommand(deps: ShowStatusCommandDeps): void {
         );
       }
       log(
-        "    Run `nemoclaw <sandbox> destroy` on whichever sandbox should stop polling, or rerun onboarding with the channel disabled.",
+        `    Run \`${CLI_NAME} <sandbox> destroy\` on whichever sandbox should stop polling, or rerun onboarding with the channel disabled.`,
       );
     }
   }
