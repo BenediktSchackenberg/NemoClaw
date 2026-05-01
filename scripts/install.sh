@@ -1486,8 +1486,8 @@ run_installer_host_preflight() {
 }
 
 run_onboard() {
-  # NOTE(#2671): usage notice is shown once earlier between Phase 1 runtime
-  # setup and Phase 2 CLI install. Keep onboarding free of duplicate prompt.
+  # NOTE(#2671): show_usage_notice moved to before Phase 2 in the main
+  # install flow. Keep onboarding free of duplicate prompt.
   info "Running ${_CLI_BIN} onboard…"
   local -a onboard_cmd=(onboard)
   local session_file="${HOME}/.nemoclaw/onboard-session.json"
