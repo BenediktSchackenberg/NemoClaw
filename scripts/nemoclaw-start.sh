@@ -2368,7 +2368,6 @@ if [ ${#NEMOCLAW_CMD[@]} -gt 0 ]; then
   exec gosu sandbox "${NEMOCLAW_CMD[@]}"
 fi
 
-<<<<<<< HEAD
 # SECURITY: Protect gateway log from sandbox user tampering
 mkdir -p /var/log/nemoclaw
 touch /var/log/nemoclaw/gateway.log
