@@ -151,6 +151,7 @@ RUN set -eu; \
 # the next maintainer reviewing an OPENCLAW_VERSION bump knows to revisit.
 COPY scripts/rcf_patch.py /usr/local/lib/nemoclaw/rcf_patch.py
 # hadolint ignore=SC2016,DL3059,DL4006
+COPY scripts/rcf_patch.py /usr/local/lib/nemoclaw/rcf_patch.py
 RUN set -eu; \
     OC_DIST=/usr/local/lib/node_modules/openclaw/dist; \
     # --- Patch 1: rewrite fetch-guard export --- \
