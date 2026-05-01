@@ -1666,8 +1666,10 @@ main() {
   install_nodejs
   ensure_supported_runtime
 
-  # Show usage notice after Phase 1 runtime setup but before Phase 2 CLI
-  # install, so rejection paths don't leave a partially-installed CLI on PATH.
+  # Show the third-party usage notice after Node.js is installed but before
+  # Phase 2 (NemoClaw CLI). This guarantees node is available for the notice
+  # UI while still ensuring rejection leaves no partially-installed CLI on PATH
+  # (#2671). Keep this outside run_onboard().
   show_usage_notice
 
   step 2 "${_CLI_DISPLAY} CLI"
